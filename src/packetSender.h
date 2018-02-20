@@ -1,6 +1,9 @@
 #ifndef _PACKET_SENDER_H_
 #define _PACKET_SENDER_H_
 
+#include <stdio.h>
+#include <stdint.h>
+
 class packetSender {
 private:
 	int sockfd;
@@ -16,10 +19,14 @@ private:
 
 	FILE *file;
 
+	int getSequenceNumber();
+
 public:
-	packetSender(int sockfd, int packetSize, int range);
-	void sendPacket();
-	void sendAck();
+	packetSender(int sockfd, int packetSize, int range, char* filename);
+	void sendPacket(int n);
+	void recieveAck();
+
+	void sendFile();
 };
 
 #endif

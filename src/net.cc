@@ -102,31 +102,3 @@ void net_read(void* x, size_t sz, int sockfd) {
 		bytesLeft -= num;
 	}
 }
-
-
-int main(int argc, char** argv) {
-	int sockfd;
-	if (argc > 1) {
-		sockfd = startClient(argv[1]);	
-		int n;
-		net_read(&n, sizeof(int), sockfd);
-		printf("%d\n", n);
-		n = 420;
-		net_write(&n, sizeof(int), sockfd);
-		net_read(&n, sizeof(int), sockfd);
-		close(sockfd);
-	} else {
-		sockfd = startServer();
-		int clifd = acceptClient(sockfd);
-		int n = 69;
-		net_write(&n, sizeof(int), clifd);
-		net_read(&n, sizeof(int), clifd);
-		printf("%d\n", n);
-		net_write(&n, sizeof(int), clifd);
-		close(clifd);
-		close(sockfd);
-	}
-
-	return 0;
-}
-

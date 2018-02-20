@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 extern int startServer();
 extern int startClient(char* host);
 extern int acceptClient(int socket);

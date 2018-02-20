@@ -2,16 +2,26 @@
 #include "packetSender.h"
 
 packetSender::packetSender(int sockfd, int packetSize, int range, char* filename) {
-	this.sockfd = sockfd;
-	this.packetSize = packetSize;
-	this.range = range;
+	this->sockfd = sockfd;
+	this->packetSize = packetSize;
+	this->range = range;
 	sequenceNumber = 0;
 	
-	sequenceNumberList = calloc(range, sizeof(uint8_t));
+	sequenceNumberList = (uint8_t *) calloc(range, sizeof(uint8_t));
 	
-	data = malloc(sizeof(uint8_t *) * range);
+	data = (uint8_t **) malloc(sizeof(uint8_t *) * range);
 
 	file = fopen(filename, "rb");
+
+	net_write(&packetSize, sizeof(int), sockfd);
+	net_write(&range, sizeof(int), sockfd);
+}
+
+void packetSender::sendFile() {
+	while (1) {
+		sendPacket(getSequenceNumber());
+		recieveAck();
+	}
 }
 
 int packetSender::getSequenceNumber() {
@@ -32,7 +42,7 @@ void packetSender::sendPacket(int n) {
 	net_write(&n, sizeof(int), sockfd);
 	// TODO: send src, dst
 
-	char *buffer = malloc(sizeof(uint8_t) * packetSize);
+	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
 	fread(buffer, sizeof(uint8_t), packetSize, file);
 
 	sequenceNumberList[n] = 1;
@@ -41,32 +51,8 @@ void packetSender::sendPacket(int n) {
 	net_write(buffer, sizeof(uint8_t) * packetSize, sockfd);
 }
 
-void packetSender::sendAck(int n) {
-	net_write(&n, sizeof(int), sockfd);
-}
-
-void packetSender::recievePacket() {
-	while (sequenceNumberList[sequenceNumber]) {
-		int n;
-		net_read(&n, sizeof(int), sockfd);
-
-		char *buffer = malloc(sizeof(uint8_t) * packetSize);
-		net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
-
-		if (!sequenceNumberList[n]) {
-			sendAck(n);
-		} 
-
-		if (n == sequenceNumber) {
-			fwrite(buffer, sizeof(uint8_t), packetSize, file);
-		}
-
-		free(buffer);
-	}
-}
-
 void packetSender::recieveAck() {
-	while (sequenceNumberList[sequenceNumber]) {
+//	while (sequenceNumberList[sequenceNumber]) {
 		int n;
 		net_read(&n, sizeof(int), sockfd);
 		
@@ -74,5 +60,5 @@ void packetSender::recieveAck() {
 			free(data[n]);
 			sequenceNumberList[n] = 0;
 		}
-	}
+	//}
 }
