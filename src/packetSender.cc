@@ -5,6 +5,8 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
+	this->hasOverrun = false;
+	this->eof = false;
 	sequenceNumber = 0;
 	
 	sequenceNumberList = (uint8_t *) calloc(range, sizeof(uint8_t));
@@ -17,8 +19,9 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 	net_write(&range, sizeof(int), sockfd);
 }
 
+// TODO: pass/open file here
 void packetSender::sendFile() {
-	while (1) {
+	while (!eof) {
 		sendPacket(getSequenceNumber());
 		recieveAck();
 	}
@@ -43,7 +46,48 @@ void packetSender::sendPacket(int n) {
 	// TODO: send src, dst
 
 	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
-	fread(buffer, sizeof(uint8_t), packetSize, file);
+	/*size_t len = fread(buffer, sizeof(uint8_t), packetSize, file);
+
+	if (len < sizeof(uint8_t) * packetSize) {
+		// insert eof at buffer[len]
+		
+	}
+	*/
+
+	// encode buffer - insert escape bytes
+	int i = 0;
+
+	if (hasOverrun) {
+		buffer[i] = overrun;
+		hasOverrun = false;
+		i++;
+	}
+
+	for (; i < packetSize; i++) {
+		int c = fgetc(file);
+
+		buffer[i] = c;
+
+		if (c == EOF) {
+			buffer[i] = 0x00;
+			eof = true;
+			break;
+		}
+
+		if (buffer[i] == 0x00 || buffer[i] == 0x01) {
+			if (i != packetSize - 1) {
+				buffer[i+1] = buffer[i];
+			} else {
+				overrun = buffer[i];
+				hasOverrun = true;
+			}
+
+			buffer[i] = 0x01;
+			i++;
+		}
+	}
+
+	printf("%s\n", buffer);
 
 	sequenceNumberList[n] = 1;
 	data[n] = buffer;

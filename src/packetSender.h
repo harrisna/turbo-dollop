@@ -14,6 +14,10 @@ private:
 
 	uint8_t *sequenceNumberList;
 	uint8_t **data;
+	bool hasOverrun;
+	uint8_t overrun;
+
+	bool eof;
 
 	int sequenceNumber;
 

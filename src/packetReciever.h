@@ -14,6 +14,9 @@ private:
 
 	int sequenceNumber;
 
+	bool overrun;
+	bool eof;
+
 	FILE *file;
 
 	void incrementSequenceNumber();
