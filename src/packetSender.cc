@@ -1,4 +1,6 @@
 #include "net.h"
+#include "timer.h"
+
 #include "packetSender.h"
 
 packetSender::packetSender(int sockfd, int packetSize, int range, char* filename) {
@@ -21,10 +23,22 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 
 // TODO: pass/open file here
 void packetSender::sendFile() {
+	timer totalTimer;
+	totalTimer.start();
+	
 	while (!eof) {
+		timer rtTimer;
+		rtTimer.start();
+
 		sendPacket(getSequenceNumber());
 		recieveAck();
+
+		double rtt = rtTimer.end();
+		printf("RTT: %fms\n", rtt);
 	}
+
+	double totalTime = totalTimer.end();
+	printf("Total Time: %fms\n", totalTime);
 }
 
 int packetSender::getSequenceNumber() {
@@ -46,13 +60,6 @@ void packetSender::sendPacket(int n) {
 	// TODO: send src, dst
 
 	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
-	/*size_t len = fread(buffer, sizeof(uint8_t), packetSize, file);
-
-	if (len < sizeof(uint8_t) * packetSize) {
-		// insert eof at buffer[len]
-		
-	}
-	*/
 
 	// encode buffer - insert escape bytes
 	int i = 0;
