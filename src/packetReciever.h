@@ -10,8 +10,6 @@ private:
 	int packetSize;
 	int range;
 	int packetsReceived;
-	char *src;
-	char *dst;
 
 	int sequenceNumber;
 

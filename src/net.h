@@ -1,6 +1,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <arpa/inet.h>
+
+#define IPSTRLEN INET_ADDRSTRLEN
+
 extern int startServer();
 extern int startClient(char* host);
 extern int acceptClient(int socket);

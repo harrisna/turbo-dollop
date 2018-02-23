@@ -60,7 +60,8 @@ int packetSender::getSequenceNumber() {
 
 void packetSender::sendPacket(int n) {
 	net_write(&n, sizeof(int), sockfd);
-	// TODO: send src, dst
+	net_write(&src, sizeof(uint32_t), sockfd);
+	net_write(&dst, sizeof(uint32_t), sockfd);
 
 	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
 
@@ -103,7 +104,11 @@ void packetSender::sendPacket(int n) {
 	data[n] = buffer;
 
 	net_write(buffer, sizeof(uint8_t) * packetSize, sockfd);
-	printf("Packet %d sent.\n", n);
+
+	char ipstr[IPSTRLEN];
+	net_addrstr(dst, ipstr, IPSTRLEN);
+
+	printf("Packet %d sent to %s.\n", n, ipstr);
 }
 
 void packetSender::recieveAck() {

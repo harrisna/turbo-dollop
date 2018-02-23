@@ -34,14 +34,21 @@ void packetReciever::incrementSequenceNumber() {
 
 void packetReciever::recievePacket() {
 	int n;
+	uint32_t src, dst;
 	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
 
 	net_read(&n, sizeof(int), sockfd);
+	net_read(&src, sizeof(uint32_t), sockfd);
+	net_read(&dst, sizeof(uint32_t), sockfd);
 	net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
 
 	//printf("%s\n", buffer);
 	printf("Expected seq#: %d\n", sequenceNumber);
-	printf("Packet %d recieved.\n", n);
+
+	char ipstr[IPSTRLEN];
+	net_addrstr(src, ipstr, IPSTRLEN);
+
+	printf("Packet %d recieved from %s.\n", n, ipstr);
 
 	if (n == sequenceNumber) {
 		// decode the buffer
