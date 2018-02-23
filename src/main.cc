@@ -10,10 +10,17 @@ int main(int argc, char **argv) {
 		packetReciever r = packetReciever(startClient(argv[2]), argv[1]);
 		r.recieveFile();
 	} else {
+		int range, pktsz;
+
+		printf("Enter a sequence number range:\n");
+		scanf("%d", &range);
+		printf("\nEnter packet size:\n");
+		scanf("%d", &pktsz);
+
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, 10, 10, argv[1]);
+		packetSender s = packetSender(clifd, range, pktsz, argv[1]);
 		s.sendFile();
 	}
 }
