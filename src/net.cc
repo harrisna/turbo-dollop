@@ -6,8 +6,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #define PORT_NO 9765
+
+// to set timeout - 
+// struct timeval tv;
+// tv.tv_sec = timeout_in_seconds;
+// tv.tv_usec = 0;
+// setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
 int startServer() {
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -72,6 +79,7 @@ int acceptClient(int servSocket) {
 	
 	printf("Waiting for client...\n");
 	sockfd = accept(servSocket, (struct sockaddr*) &cli_addr, &clilen);
+
 	if (sockfd < 0) {
 		perror("Error accepting client");
 		exit(1);
@@ -101,4 +109,26 @@ void net_read(void* x, size_t sz, int sockfd) {
 		
 		bytesLeft -= num;
 	}
+}
+
+uint32_t net_getaddr(int sockfd) {
+	struct sockaddr_in cli_addr;
+	socklen_t clilen = sizeof(cli_addr);
+	
+	getsockname(sockfd, (struct sockaddr*) &cli_addr, &clilen);
+
+	struct in_addr addr = cli_addr.sin_addr;
+
+	return addr.s_addr;
+}
+
+void net_addrstr(uint32_t addr) {
+	// TODO: give string
+	struct in_addr saddr;
+	saddr.s_addr = addr;
+
+	char str[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &addr, str, INET_ADDRSTRLEN);
+	printf("%s\n", str);
+//	return str
 }

@@ -34,7 +34,7 @@ void packetSender::sendFile() {
 		recieveAck();
 
 		double rtt = rtTimer.end();
-		printf("RTT: %fms\n", rtt);
+		printf("RTT: %fms\n\n", rtt);
 	}
 
 	double totalTime = totalTimer.end();
@@ -94,18 +94,21 @@ void packetSender::sendPacket(int n) {
 		}
 	}
 
-	printf("%s\n", buffer);
+	//printf("%s\n", buffer);
 
 	sequenceNumberList[n] = 1;
 	data[n] = buffer;
 
 	net_write(buffer, sizeof(uint8_t) * packetSize, sockfd);
+	printf("Packet %d sent.\n", n);
 }
 
 void packetSender::recieveAck() {
 //	while (sequenceNumberList[sequenceNumber]) {
 		int n;
 		net_read(&n, sizeof(int), sockfd);
+
+		printf("Ack %d recieved.\n", n);
 		
 		if (n == sequenceNumber) {
 			free(data[n]);

@@ -16,6 +16,7 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 void packetReciever::recieveFile() {
 	while (!eof) {
 		recievePacket();
+		printf("\n");
 	}
 }
 
@@ -31,7 +32,9 @@ void packetReciever::recievePacket() {
 	net_read(&n, sizeof(int), sockfd);
 	net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
 
-	printf("%s\n", buffer);
+	//printf("%s\n", buffer);
+	printf("Expected seq#: %d\n", sequenceNumber);
+	printf("Packet %d recieved.\n", n);
 
 	if (n == sequenceNumber) {
 		// decode the buffer
@@ -62,4 +65,5 @@ void packetReciever::recievePacket() {
 
 void packetReciever::sendAck(int n) {
 	net_write(&n, sizeof(int), sockfd);
+	printf("Ack %d sent.\n", n);
 }
