@@ -1,5 +1,5 @@
 LIBS =
-CFLAGS = -g
+CFLAGS = -g -std=c++11
 INCLUDE =
 
 OS := $(shell uname)

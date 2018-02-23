@@ -9,6 +9,7 @@ private:
 	int sockfd;
 	int packetSize;
 	int range;
+	int packetsReceived;
 	char *src;
 	char *dst;
 
@@ -18,7 +19,7 @@ private:
 	bool eof;
 
 	FILE *file;
-
+	void printEndStats(double totalTime);
 	void incrementSequenceNumber();
 
 public:
