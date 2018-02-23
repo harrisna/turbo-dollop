@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <arpa/inet.h>
+
 #include "net.h"
 #include "packetReciever.h"
 #include "packetSender.h"
@@ -11,8 +13,18 @@ int main(int argc, char **argv) {
 		r.recieveFile();
 	} else {
 		int servfd = startServer();
+		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(acceptClient(servfd), 10, 10, argv[1]);
+		char str[INET_ADDRSTRLEN];
+		uint32_t addr = net_getlocaladdr(clifd);
+		net_addrstr(addr, str, INET_ADDRSTRLEN);
+		printf("%s\n", str);
+
+		addr = net_getaddr(clifd);
+		net_addrstr(addr, str, INET_ADDRSTRLEN);
+		printf("%s\n", str);
+
+		packetSender s = packetSender(clifd, 10, 10, argv[1]);
 		s.sendFile();
 	}
 }

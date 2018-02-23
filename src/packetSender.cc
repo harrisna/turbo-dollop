@@ -17,6 +17,9 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 
 	file = fopen(filename, "rb");
 
+	this->src = net_getlocaladdr(sockfd);
+	this->dst = net_getaddr(sockfd);
+
 	net_write(&packetSize, sizeof(int), sockfd);
 	net_write(&range, sizeof(int), sockfd);
 }

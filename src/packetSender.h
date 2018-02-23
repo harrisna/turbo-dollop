@@ -9,8 +9,8 @@ private:
 	int sockfd;
 	int packetSize;
 	int range;
-	char *src;
-	char *dst;
+	uint32_t src;
+	uint32_t dst;
 
 	uint8_t *sequenceNumberList;
 	uint8_t **data;

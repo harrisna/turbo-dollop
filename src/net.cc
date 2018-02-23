@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <ifaddrs.h>
 
 #define PORT_NO 9765
 
@@ -115,6 +116,17 @@ uint32_t net_getaddr(int sockfd) {
 	struct sockaddr_in cli_addr;
 	socklen_t clilen = sizeof(cli_addr);
 	
+	getpeername(sockfd, (struct sockaddr*) &cli_addr, &clilen);
+
+	struct in_addr addr = cli_addr.sin_addr;
+
+	return addr.s_addr;
+}
+
+uint32_t net_getlocaladdr(int sockfd) {
+	struct sockaddr_in cli_addr;
+	socklen_t clilen = sizeof(cli_addr);
+	
 	getsockname(sockfd, (struct sockaddr*) &cli_addr, &clilen);
 
 	struct in_addr addr = cli_addr.sin_addr;
@@ -122,13 +134,11 @@ uint32_t net_getaddr(int sockfd) {
 	return addr.s_addr;
 }
 
-void net_addrstr(uint32_t addr) {
-	// TODO: give string
-	struct in_addr saddr;
-	saddr.s_addr = addr;
+void net_addrstr(uint32_t addr, char *str, size_t len) {
+	struct in_addr staddr;
+	staddr.s_addr = addr;
 
-	char str[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &addr, str, INET_ADDRSTRLEN);
-	printf("%s\n", str);
-//	return str
+	//char str[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &staddr, str, len);
+	//printf("%s\n", str);
 }
