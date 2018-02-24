@@ -1,6 +1,5 @@
 #include "net.h"
 #include "timer.h"
-
 #include "packetSender.h"
 
 packetSender::packetSender(int sockfd, int packetSize, int range, char* filename) {
@@ -9,7 +8,10 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 	this->range = range;
 	this->hasOverrun = false;
 	this->eof = false;
+	this->filename = filename;
 	sequenceNumber = 0;
+
+	this->packetsSent = 0;
 	
 	sequenceNumberList = (uint8_t *) calloc(range, sizeof(uint8_t));
 	
@@ -41,7 +43,7 @@ void packetSender::sendFile() {
 	}
 
 	double totalTime = totalTimer.end();
-	printf("Total Time: %fms\n", totalTime);
+	printEndStats(totalTime);
 }
 
 int packetSender::getSequenceNumber() {
@@ -109,6 +111,7 @@ void packetSender::sendPacket(int n) {
 	net_addrstr(dst, ipstr, IPSTRLEN);
 
 	printf("Packet %d sent to %s.\n", n, ipstr);
+	packetsSent++;
 }
 
 void packetSender::recieveAck() {
@@ -123,4 +126,13 @@ void packetSender::recieveAck() {
 			sequenceNumberList[n] = 0;
 		}
 	//}
+}
+void packetSender::printEndStats(double totalTime) {
+	printf("Packet size: %d bytes\n", packetSize);
+	printf("Number of packets sent: %d\n", packetsSent);
+	printf("Total Time: %fms\n", totalTime);
+	printf("Throughput: %f (Mbps)\n",(packetSize*packetsSent)/totalTime);
+	char md5sum[30] = "md5sum ";
+	strcat(md5sum, filename);
+	system(md5sum);
 }

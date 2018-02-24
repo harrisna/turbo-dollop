@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <cstring>
 
 class packetReciever {
 private:
@@ -15,6 +16,7 @@ private:
 
 	bool overrun;
 	bool eof;
+	char* filename;
 
 	FILE *file;
 	void printEndStats(double totalTime);

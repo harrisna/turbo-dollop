@@ -6,6 +6,7 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	this->sockfd = sockfd;
 	this->eof = false;
 	this->packetsReceived = 0;
+	this->filename = filename;
 
 	file = fopen(filename, "wb");
 
@@ -83,7 +84,10 @@ void packetReciever::sendAck(int n) {
 }
 
 void packetReciever::printEndStats(double totalTime) {
-	printf("Packet size received %d\n", packetSize);
-	printf("Packets received %d\n", packetsReceived);
-	printf("Total elapsed time %f\n", totalTime);
+	printf("Packet size received: %d bytes\n", packetSize);
+	printf("Packets received: %d\n", packetsReceived);
+	printf("Total elapsed time %fms\n", totalTime);
+	char md5sum[30] = "md5sum ";
+	strcat(md5sum, filename);
+	system(md5sum);
 }

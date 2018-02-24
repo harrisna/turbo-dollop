@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <cstring>
 
 class packetSender {
 private:
@@ -11,6 +12,8 @@ private:
 	int range;
 	uint32_t src;
 	uint32_t dst;
+	char* filename;
+	int packetsSent;
 
 	uint8_t *sequenceNumberList;
 	uint8_t **data;
@@ -24,6 +27,7 @@ private:
 	FILE *file;
 
 	int getSequenceNumber();
+	void printEndStats(double totalTime);
 
 public:
 	packetSender(int sockfd, int packetSize, int range, char* filename);
