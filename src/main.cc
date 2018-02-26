@@ -14,13 +14,13 @@ int main(int argc, char **argv) {
 
 		printf("Enter a sequence number range:\n");
 		scanf("%d", &range);
-		printf("\nEnter packet size:\n");
+		printf("\nEnter packet size (in bytes):\n");
 		scanf("%d", &pktsz);
 
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, range, pktsz, argv[1]);
+		packetSender s = packetSender(clifd, pktsz, range, argv[1]);
 		s.sendFile();
 	}
 }
