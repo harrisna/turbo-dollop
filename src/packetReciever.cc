@@ -24,6 +24,7 @@ void packetReciever::recieveFile() {
 		printf("\n");
 	}
 	double totalTime = totalTimer.end();
+	fclose(file);
 	printEndStats(totalTime);
 }
 

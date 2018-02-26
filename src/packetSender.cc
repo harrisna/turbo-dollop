@@ -43,6 +43,7 @@ void packetSender::sendFile() {
 	}
 
 	double totalTime = totalTimer.end();
+	fclose(file);
 	printEndStats(totalTime);
 }
 
