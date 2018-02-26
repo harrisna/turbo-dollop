@@ -132,8 +132,9 @@ void packetSender::printEndStats(double totalTime) {
 	printf("Packet size: %d bytes\n", packetSize);
 	printf("Number of packets sent: %d\n", packetsSent);
 	printf("Total Time: %fms\n", totalTime);
-	printf("Throughput: %f (Mbps)\n",(packetSize*packetsSent)/totalTime);
-	char md5sum[30] = "md5sum ";
-	strcat(md5sum, filename);
+	printf("Throughput: %f (Mbps)\n",((packetSize*packetsSent)*8)/totalTime);
+	char *md5sum = (char *)malloc((strlen(filename) + 7) * sizeof(char));
+	sprintf(md5sum, "md5sum %s", filename);
 	system(md5sum);
+	free(md5sum);
 }

@@ -88,7 +88,8 @@ void packetReciever::printEndStats(double totalTime) {
 	printf("Packet size received: %d bytes\n", packetSize);
 	printf("Packets received: %d\n", packetsReceived);
 	printf("Total elapsed time %fms\n", totalTime);
-	char md5sum[30] = "md5sum ";
-	strcat(md5sum, filename);
+	char *md5sum = (char *)malloc((strlen(filename) + 7) * sizeof(char));
+	sprintf(md5sum, "md5sum %s", filename);
 	system(md5sum);
+	free(md5sum);
 }
