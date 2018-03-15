@@ -58,12 +58,10 @@ void packetReciever::recievePacket() {
 		if (overrun)
 			i++;
 		for (; i < packetSize; i++) {
-			//fwrite(buffer, sizeof(uint8_t), packetSize, file);
 			if (buffer[i] == 0x00) {
 				eof = true;
 				break;
 			} else if (buffer[i] == 0x01) {
-				// FIXME: if there is overrun on an escape character, we need to save that state
 				if (i == packetSize - 1)
 					overrun = true;
 				else
@@ -71,12 +69,12 @@ void packetReciever::recievePacket() {
 			}
 			fputc(buffer[i], file);
 		}
+
+		sendAck(sequenceNumber);
+		incrementSequenceNumber();
 	}
 
 	free(buffer);
-
-	sendAck(sequenceNumber);
-	incrementSequenceNumber();
 }
 
 void packetReciever::sendAck(int n) {
