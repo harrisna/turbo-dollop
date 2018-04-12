@@ -6,6 +6,7 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
+	this->windowSize = 1;	// TODO: assign other values
 	this->hasOverrun = false;
 	this->eof = false;
 	this->filename = filename;
@@ -13,9 +14,11 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 
 	this->packetsSent = 0;
 	
-	sequenceNumberList = (uint8_t *) calloc(range, sizeof(uint8_t));
-	
-	data = (uint8_t **) malloc(sizeof(uint8_t *) * range);
+	encoded = 0;
+	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
+	for (int i = 0; i < windowSize; i++) {
+		data[i] = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
+	}
 
 	file = fopen(filename, "rb");
 
@@ -30,13 +33,40 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 void packetSender::sendFile() {
 	timer totalTimer;
 	totalTimer.start();
+
+	int sws = windowSize;	// sending window size
+	int lar = 0;	// last acknowledgement recieved
+	int lfs = 0;	// last frame sent
 	
 	while (!eof) {
 		timer rtTimer;
 		rtTimer.start();
 
-		sendPacket(getSequenceNumber());
-		recieveAck();
+		// TODO: fix timers
+
+		// range [lar, lfs] has already been encoded, encode lfs + sws - lar times
+		// if lar is greater than lfs, we have to go back around
+		int toBeEncoded = lfs + sws - ((lfs >= lar) ? lar : lar - sws - 1);
+		//int toBeEncoded = lfs + sws - lar;
+
+		printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
+		for (int i = 0; i < toBeEncoded && !eof; i++) {
+			encodePacket((sequenceNumber + i) % range);
+			printf("%d\n", i);
+		}
+
+		for (int i = 0; i < windowSize; i++) {
+			sendPacket((sequenceNumber + i) % range);
+		}
+
+		lfs = (sequenceNumber + sws - 1) % range;
+
+		for (int i = 0; i < windowSize; i++)
+			lar = recieveAck();
+
+		sequenceNumber = lar + 1 % range;
+	
+		// here, find the remaining number of encoded packets and idx of first unencoded packet
 
 		double rtt = rtTimer.end();
 		printf("RTT: %fms\n\n", rtt);
@@ -47,26 +77,8 @@ void packetSender::sendFile() {
 	printEndStats(totalTime);
 }
 
-int packetSender::getSequenceNumber() {
-	/*int i = 0;
-	while (i < range && sequenceNumberList[i] > 0)
-		i++;
-	*/
-
-	int i = sequenceNumber;
-
-	sequenceNumber++;
-	sequenceNumber %= range;
-
-	return i;
-}
-
-void packetSender::sendPacket(int n) {
-	net_write(&n, sizeof(int), sockfd);
-	net_write(&src, sizeof(uint32_t), sockfd);
-	net_write(&dst, sizeof(uint32_t), sockfd);
-
-	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
+void packetSender::encodePacket(int n) {
+	uint8_t *buffer = data[n % windowSize];
 
 	// encode buffer - insert escape bytes
 	int i = 0;
@@ -100,13 +112,15 @@ void packetSender::sendPacket(int n) {
 			i++;
 		}
 	}
+	printf("buffer: %s\n", buffer);
+}
 
-	//printf("%s\n", buffer);
+void packetSender::sendPacket(int n) {
+	net_write(&n, sizeof(int), sockfd);
+	net_write(&src, sizeof(uint32_t), sockfd);
+	net_write(&dst, sizeof(uint32_t), sockfd);
 
-	sequenceNumberList[n] = 1;
-	data[n] = buffer;
-
-	net_write(buffer, sizeof(uint8_t) * packetSize, sockfd);
+	net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
 
 	char ipstr[IPSTRLEN];
 	net_addrstr(dst, ipstr, IPSTRLEN);
@@ -115,18 +129,13 @@ void packetSender::sendPacket(int n) {
 	packetsSent++;
 }
 
-void packetSender::recieveAck() {
-//	while (sequenceNumberList[sequenceNumber]) {
-		int n;
-		net_read(&n, sizeof(int), sockfd);
+int packetSender::recieveAck() {
+	int n;
+	net_read(&n, sizeof(int), sockfd);
 
-		printf("Ack %d recieved.\n", n);
-		
-		if (n == sequenceNumber) {
-			free(data[n]);
-			sequenceNumberList[n] = 0;
-		}
-	//}
+	printf("Ack %d recieved.\n", n);
+
+	return n;
 }
 void packetSender::printEndStats(double totalTime) {
 	printf("Packet size: %d bytes\n", packetSize);

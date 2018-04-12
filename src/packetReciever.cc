@@ -44,7 +44,7 @@ void packetReciever::recievePacket() {
 	net_read(&dst, sizeof(uint32_t), sockfd);
 	net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
 
-	//printf("%s\n", buffer);
+	printf("%s\n", buffer);
 	printf("Expected seq#: %d\n", sequenceNumber);
 
 	char ipstr[IPSTRLEN];
@@ -52,8 +52,10 @@ void packetReciever::recievePacket() {
 
 	printf("Packet %d recieved from %s.\n", n, ipstr);
 
+	bool packetGood = false;
+
 	if (n == sequenceNumber) {
-		// decode the buffer
+		// decode the buffer TODO: checksum
 		int i = 0;
 		if (overrun)
 			i++;
@@ -70,8 +72,15 @@ void packetReciever::recievePacket() {
 			fputc(buffer[i], file);
 		}
 
+		packetGood = true;
+	}
+
+	if (packetGood) {
 		sendAck(sequenceNumber);
 		incrementSequenceNumber();
+	} else {
+		// resend prev ack
+		sendAck(sequenceNumber - 1);
 	}
 
 	free(buffer);

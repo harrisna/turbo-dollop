@@ -10,13 +10,15 @@ private:
 	int sockfd;
 	int packetSize;
 	int range;
+	int windowSize;
 	uint32_t src;
 	uint32_t dst;
 	char* filename;
 	int packetsSent;
 
-	uint8_t *sequenceNumberList;
+	int encoded;	// last encoded packet
 	uint8_t **data;
+
 	bool hasOverrun;
 	uint8_t overrun;
 
@@ -31,8 +33,9 @@ private:
 
 public:
 	packetSender(int sockfd, int packetSize, int range, char* filename);
+	void encodePacket(int n);
 	void sendPacket(int n);
-	void recieveAck();
+	int recieveAck();
 
 	void sendFile();
 };
