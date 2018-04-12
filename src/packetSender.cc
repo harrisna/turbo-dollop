@@ -49,9 +49,11 @@ void packetSender::sendFile() {
 		int toBeEncoded = lfs + sws - ((lfs >= lar) ? lar : lar - sws - 1);
 		//int toBeEncoded = lfs + sws - lar;
 
+		// TODO: remove me
 		printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
 		for (int i = 0; i < toBeEncoded && !eof; i++) {
 			encodePacket((sequenceNumber + i) % range);
+			// TODO: remove me
 			printf("%d\n", i);
 		}
 
