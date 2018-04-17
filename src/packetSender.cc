@@ -3,7 +3,7 @@
 #include "packetSender.h"
 #include "rand.h"
 
-packetSender::packetSender(int sockfd, int packetSize, int range, char* filename) {
+packetSender::packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
@@ -11,6 +11,7 @@ packetSender::packetSender(int sockfd, int packetSize, int range, char* filename
 	this->hasOverrun = false;
 	this->eof = false;
 	this->filename = filename;
+	this->damPercent = damPercent;
 	sequenceNumber = 0;
 
 	this->packetsSent = 0;
@@ -122,7 +123,11 @@ void packetSender::sendPacket(int n, bool damage) {
 	net_write(&n, sizeof(int), sockfd);
 	net_write(&src, sizeof(uint32_t), sockfd);
 	net_write(&dst, sizeof(uint32_t), sockfd);
+	
+	long randomNumber = randL(100);
 
+	printf("Damage percent: %ld\n", randomNumber);
+	damage = (randomNumber < damPercent);
 	if (!damage) {
 		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
 	} else {

@@ -11,16 +11,19 @@ int main(int argc, char **argv) {
 		r.recieveFile();
 	} else {
 		int range, pktsz;
+		long damPercent;
 
 		printf("Enter a sequence number range:\n");
 		scanf("%d", &range);
 		printf("\nEnter packet size (in bytes):\n");
 		scanf("%d", &pktsz);
+		printf("Enter percent of packets you would like damaged:\n");
+		scanf("%ld", &damPercent);
 
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, pktsz, range, argv[1]);
+		packetSender s = packetSender(clifd, pktsz, range, argv[1], damPercent);
 		s.sendFile();
 	}
 }
