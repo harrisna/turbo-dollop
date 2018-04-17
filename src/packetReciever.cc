@@ -8,6 +8,8 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	this->packetsReceived = 0;
 	this->filename = filename;
 
+	this->overrun = false;
+
 	file = fopen(filename, "wb");
 
 	net_read(&packetSize, sizeof(int), sockfd);
