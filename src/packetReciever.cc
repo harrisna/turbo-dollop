@@ -61,8 +61,12 @@ void packetReciever::recievePacket() {
 	if (n == sequenceNumber) {
 		// decode the buffer TODO: checksum
 		int i = 0;
-		if (overrun)
+		if (overrun) {
 			i++;
+			fputc(buffer[0], file);
+			overrun = false;
+		}
+
 		for (; i < packetSize; i++) {
 			if (buffer[i] == 0x00) {
 				eof = true;
