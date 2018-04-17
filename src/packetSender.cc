@@ -59,7 +59,7 @@ void packetSender::sendFile() {
 		}
 
 		for (int i = 0; i < windowSize; i++) {
-			sendPacket((sequenceNumber + i) % range);
+			sendPacket((sequenceNumber + i) % range, false);
 		}
 
 		lfs = (sequenceNumber + sws - 1) % range;
@@ -118,14 +118,21 @@ void packetSender::encodePacket(int n) {
 	printf("buffer: %s\n", buffer);
 }
 
-void packetSender::sendPacket(int n) {
+void packetSender::sendPacket(int n, bool damage) {
 	net_write(&n, sizeof(int), sockfd);
 	net_write(&src, sizeof(uint32_t), sockfd);
 	net_write(&dst, sizeof(uint32_t), sockfd);
 
-	net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+	if (!damage) {
+		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+	} else {
+		data[n % windowSize][0] ^= 0x01;
+		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+		data[n % windowSize][0] ^= 0x01;
+	}
 
 	uint16_t sum = cksum((uint16_t*) data[n % windowSize], packetSize / 2);
+	printf("checksum: %d\n", sum);
 	net_write(&sum, sizeof(uint16_t), sockfd);
 
 	char ipstr[IPSTRLEN];

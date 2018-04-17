@@ -34,7 +34,7 @@ private:
 public:
 	packetSender(int sockfd, int packetSize, int range, char* filename);
 	void encodePacket(int n);
-	void sendPacket(int n);
+	void sendPacket(int n, bool damage);
 	int recieveAck();
 
 	void sendFile();

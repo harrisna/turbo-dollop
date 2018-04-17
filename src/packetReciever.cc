@@ -81,7 +81,9 @@ void packetReciever::recievePacket() {
 			fputc(buffer[i], file);
 		}
 
+		printf("checksum: %d\n", cksum((uint16_t*) buffer, packetSize / 2));
 		packetGood = (sum == cksum((uint16_t*) buffer, packetSize / 2));
+		printf("packetgood: %d\n", packetGood);
 	}
 
 	if (packetGood) {
@@ -89,7 +91,8 @@ void packetReciever::recievePacket() {
 		incrementSequenceNumber();
 	} else {
 		// resend prev ack
-		sendAck(sequenceNumber - 1);
+		eof = false;
+		sendAck(((sequenceNumber + range) - 1) % range);
 	}
 
 	free(buffer);
