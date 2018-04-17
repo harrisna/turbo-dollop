@@ -45,10 +45,9 @@ void packetSender::sendFile() {
 
 		// TODO: fix timers
 
-		// range [lar, lfs] has already been encoded, encode lfs + sws - lar times
+		// range [lar, lfs] has already been encoded, encode sws - (lfs - lar) times
 		// if lar is greater than lfs, we have to go back around
-		int toBeEncoded = lfs + sws - ((lfs >= lar) ? lar : lar - sws - 1);
-		//int toBeEncoded = lfs + sws - lar;
+		int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range));
 
 		// TODO: remove me
 		printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
