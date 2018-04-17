@@ -1,6 +1,7 @@
 #include "net.h"
 #include "timer.h"
 #include "packetReciever.h"
+#include "rand.h"
 
 packetReciever::packetReciever(int sockfd, char* filename) {
 	this->sockfd = sockfd;

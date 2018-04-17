@@ -11,7 +11,7 @@ CC = g++
 LIBS += 
 endif
 
-SRC = src/net.cc src/timer.cc src/packetSender.cc src/packetReciever.cc src/main.cc
+SRC = src/rand.cc src/net.cc src/timer.cc src/packetSender.cc src/packetReciever.cc src/main.cc
 OBJ = $(patsubst src/%.cc, obj/%.o, $(SRC))
 TARGET = net
 

@@ -144,7 +144,7 @@ void net_addrstr(uint32_t addr, char *str, size_t len) {
 }
 
 uint16_t cksum(uint16_t *buf, int count) {
-	register uint32_t sum = 0;
+	uint32_t sum = 0;
 	while (count--) {
 		sum += *buf++;
 		if (sum & 0xFFFF0000) {

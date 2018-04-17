@@ -1,6 +1,7 @@
 #include "net.h"
 #include "timer.h"
 #include "packetSender.h"
+#include "rand.h"
 
 packetSender::packetSender(int sockfd, int packetSize, int range, char* filename) {
 	this->sockfd = sockfd;
