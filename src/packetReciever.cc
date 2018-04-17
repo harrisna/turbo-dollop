@@ -38,11 +38,13 @@ void packetReciever::recievePacket() {
 	int n;
 	uint32_t src, dst;
 	uint8_t *buffer = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
+	uint16_t sum;
 
 	net_read(&n, sizeof(int), sockfd);
 	net_read(&src, sizeof(uint32_t), sockfd);
 	net_read(&dst, sizeof(uint32_t), sockfd);
 	net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
+	net_read(&sum, sizeof(uint16_t), sockfd);
 
 	printf("%s\n", buffer);
 	printf("Expected seq#: %d\n", sequenceNumber);
@@ -72,7 +74,7 @@ void packetReciever::recievePacket() {
 			fputc(buffer[i], file);
 		}
 
-		packetGood = true;
+		packetGood = (sum == cksum((uint16_t*) buffer, packetSize / 2));
 	}
 
 	if (packetGood) {

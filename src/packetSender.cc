@@ -124,6 +124,9 @@ void packetSender::sendPacket(int n) {
 
 	net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
 
+	uint16_t sum = cksum((uint16_t*) data[n % windowSize], packetSize / 2);
+	net_write(&sum, sizeof(uint16_t), sockfd);
+
 	char ipstr[IPSTRLEN];
 	net_addrstr(dst, ipstr, IPSTRLEN);
 

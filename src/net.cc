@@ -142,3 +142,16 @@ void net_addrstr(uint32_t addr, char *str, size_t len) {
 	inet_ntop(AF_INET, &staddr, str, len);
 	//printf("%s\n", str);
 }
+
+uint16_t cksum(uint16_t *buf, int count) {
+	register uint32_t sum = 0;
+	while (count--) {
+		sum += *buf++;
+		if (sum & 0xFFFF0000) {
+			/* carry occurred, so wrap around */
+			sum &= 0xFFFF;
+			sum++;
+		}
+	}
+	return ~(sum & 0xFFFF);
+}
