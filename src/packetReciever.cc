@@ -59,13 +59,19 @@ void packetReciever::recievePacket() {
 
 	bool packetGood = false;
 
+	// allocate decoded buffer
+	uint8_t *decoded = (uint8_t *) calloc(packetSize, sizeof(uint8_t));	
+	int di = 0;
+
 	if (n == sequenceNumber) {
-		// decode the buffer TODO: checksum
+		// decode the buffer
 		int i = 0;
 		if (overrun) {
-			i++;
-			fputc(buffer[0], file);
+			//fputc(buffer[0], file);
+			decoded[di] = buffer[i];
 			overrun = false;
+			i++;
+			di++;
 		}
 
 		for (; i < packetSize; i++) {
@@ -78,7 +84,9 @@ void packetReciever::recievePacket() {
 				else
 					i++;
 			}
-			fputc(buffer[i], file);
+			//fputc(buffer[i], file);
+			decoded[di] = buffer[i];
+			di++;
 		}
 
 		printf("checksum: %d\n", cksum((uint16_t*) buffer, packetSize / 2));
@@ -87,6 +95,7 @@ void packetReciever::recievePacket() {
 	}
 
 	if (packetGood) {
+		fwrite(decoded, sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
 		sendAck(sequenceNumber);
 		incrementSequenceNumber();
 	} else {

@@ -40,7 +40,7 @@ void packetSender::sendFile() {
 	int lar = 0;	// last acknowledgement recieved
 	int lfs = 0;	// last frame sent
 	
-	while (!eof) {
+	while (!(eof && lar == lfs)) {
 		timer rtTimer;
 		rtTimer.start();
 
