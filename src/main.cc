@@ -10,16 +10,38 @@ int main(int argc, char **argv) {
 		packetReciever r = packetReciever(startClient(argv[2]), argv[1]);
 		r.recieveFile();
 	} else {
-		int range, pktsz;
+		int range, pktsz, option;
+		char dam;
 		long damPercent;
 
 		printf("Enter a sequence number range:\n");
 		scanf("%d", &range);
 		printf("\nEnter packet size (in bytes):\n");
 		scanf("%d", &pktsz);
-		printf("Enter percent of packets you would like damaged:\n");
-		scanf("%ld", &damPercent);
-
+		printf("Would you like to damage packets? (y/n)");
+		scanf(" %c", &dam);
+		if(dam == 'y'){
+			printf("Would you like to damage a percent of packets (1) or specific packet numbers(2)?\n"); 
+			scanf("%d", &option);
+			if(option == 1) {
+				printf("Enter percent of packets you would like damaged:\n");
+				scanf("%ld", &damPercent);
+			}
+			else {
+				printf("Enter the packet numbers you'd like damaged. Enter -1 to finish\n");
+				int specificDamage;
+				int i = 0;
+				int* buffer = (int*) malloc(sizeof(int) * 30);
+				scanf("%d", &specificDamage);
+				while(specificDamage != -1) {
+					buffer[i] = scanf("%d", &specificDamage);
+				}
+				int j = 0;
+				for(j; j<30; j++) {
+					printf("%d\n", buffer[j]);
+				}
+			}
+		}
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
