@@ -22,10 +22,30 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 void packetReciever::recieveFile() {
 	timer totalTimer;
 	totalTimer.start();
+
+	//int rws = windowSize;	// window size
+	int rws = 1;
+	int lfr = 0;		// last frame recieved
+	int laf = 0;		// last acceptable frame (last ack sent)
+
 	while (!eof) {
-		recievePacket();
+		// recieve pkt
+		// send ack(n)
+		// if pkt > expected, but less than expected + sws, buffer
+		// if pkt == expected, increase expected
+		// else, ignore
+
+		// recieve packets from laf to laf + sws
+		for (int i = 0; i < rws; i++) {
+			recievePacket();
+		}
+
+		// increase acks to first missing packet - 1
+		// send ack
+		
 		printf("\n");
 	}
+
 	double totalTime = totalTimer.end();
 	fclose(file);
 	printEndStats(totalTime);
@@ -67,7 +87,6 @@ void packetReciever::recievePacket() {
 		// decode the buffer
 		int i = 0;
 		if (overrun) {
-			//fputc(buffer[0], file);
 			decoded[di] = buffer[i];
 			overrun = false;
 			i++;
@@ -84,7 +103,6 @@ void packetReciever::recievePacket() {
 				else
 					i++;
 			}
-			//fputc(buffer[i], file);
 			decoded[di] = buffer[i];
 			di++;
 		}

@@ -8,6 +8,7 @@ private:
 	std::chrono::high_resolution_clock::time_point tpstart;
 public:
 	void start();
+	double peek();
 	double end();
 };
 

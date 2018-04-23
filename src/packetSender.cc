@@ -39,40 +39,43 @@ void packetSender::sendFile() {
 	int sws = windowSize;	// sending window size
 	int lar = 0;	// last acknowledgement recieved
 	int lfs = 0;	// last frame sent
+
+	timer rtTimer[windowSize];
 	
 	while (!(eof && lar == lfs)) {
-		timer rtTimer;
-		rtTimer.start();
-
-		// TODO: fix timers
-
 		// range [lar, lfs] has already been encoded, encode sws - (lfs - lar) times
 		// if lar is greater than lfs, we have to go back around
-		int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range));
+		int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range)); // if this is greater than one, we didn't time out
 
 		// TODO: remove me
 		printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
-		for (int i = 0; i < toBeEncoded && !eof; i++) {
-			encodePacket((sequenceNumber + i) % range);
-			// TODO: remove me
-			printf("%d\n", i);
-		}
 
-		for (int i = 0; i < windowSize; i++) {
-			sendPacket((sequenceNumber + i) % range, false);
+		if (toBeEncoded) {
+			for (int i = 0; i < toBeEncoded && !eof; i++) {
+				encodePacket((sequenceNumber + i) % range);
+
+				rtTimer[(sequenceNumber + i) % range].start();
+				sendPacket((sequenceNumber + i) % range, false);
+			}
+		} else {
+			for (int i = 0; i < windowSize; i++) {
+				rtTimer[(sequenceNumber + i) % range].start();
+				sendPacket((sequenceNumber + i) % range, false);
+			}
 		}
 
 		lfs = (sequenceNumber + sws - 1) % range;
 
-		for (int i = 0; i < windowSize; i++)
-			lar = recieveAck();
+		// now get ack TODO: set timeout
+		//int oldlar = lar;
+		lar = recieveAck();
+
+		/*for (int i = oldlar; i < (lar >= oldlar) ? lar : lar + range; i++) {
+			double rtt = rtTimer[i].end();
+			printf("RTT: %fms\n\n", rtt);	// TODO: display packet number??
+		}*/
 
 		sequenceNumber = lar + 1 % range;
-	
-		// here, find the remaining number of encoded packets and idx of first unencoded packet
-
-		double rtt = rtTimer.end();
-		printf("RTT: %fms\n\n", rtt);
 	}
 
 	double totalTime = totalTimer.end();
