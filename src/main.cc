@@ -13,6 +13,8 @@ int main(int argc, char **argv) {
 		int range, pktsz, option;
 		char dam;
 		long damPercent;
+		int errorChoice = 0;
+		int* buffer;
 
 		printf("Enter a sequence number range:\n");
 		scanf("%d", &range);
@@ -26,6 +28,7 @@ int main(int argc, char **argv) {
 			if(option == 1) {
 				printf("Enter percent of packets you would like damaged:\n");
 				scanf("%ld", &damPercent);
+				errorChoice = 1;
 			}
 			else {
 				printf("Enter the packet numbers you'd like damaged. Enter -1 to finish\n");
@@ -36,16 +39,13 @@ int main(int argc, char **argv) {
 				while(specificDamage != -1) {
 					buffer[i] = scanf("%d", &specificDamage);
 				}
-				int j = 0;
-				for(j; j<30; j++) {
-					printf("%d\n", buffer[j]);
-				}
+				errorChoice = 2;
 			}
 		}
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, pktsz, range, argv[1], damPercent);
+		packetSender s = packetSender(clifd, pktsz, range, argv[1], damPercent, buffer, errorChoice);
 		s.sendFile();
 	}
 }

@@ -16,7 +16,8 @@ private:
 	char* filename;
 	int packetsSent;
 	long damPercent;
-
+	int errorChoice;
+	int* errorBuffer;
 	int encoded;	// last encoded packet
 	uint8_t **data;
 
@@ -33,7 +34,8 @@ private:
 	void printEndStats(double totalTime);
 
 public:
-	packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent);
+	packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent, int* errorBuffer, int
+	errorChoice);
 	void encodePacket(int n);
 	void sendPacket(int n, bool damage);
 	int recieveAck();

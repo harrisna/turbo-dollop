@@ -3,7 +3,8 @@
 #include "packetSender.h"
 #include "rand.h"
 
-packetSender::packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent) {
+packetSender::packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent, int* errorBuffer, int
+errorChoice) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
@@ -56,6 +57,11 @@ void packetSender::sendFile() {
 			encodePacket((sequenceNumber + i) % range);
 			// TODO: remove me
 			printf("%d\n", i);
+		}
+
+		bool damagePacket = false;
+		if (errorChoice == 1 || errorChoice == 2) {
+			damagePacket = true;
 		}
 
 		for (int i = 0; i < windowSize; i++) {
@@ -122,17 +128,27 @@ void packetSender::sendPacket(int n, bool damage) {
 	net_write(&n, sizeof(int), sockfd);
 	net_write(&src, sizeof(uint32_t), sockfd);
 	net_write(&dst, sizeof(uint32_t), sockfd);
-	
-	long randomNumber = randL(100);
+	if(errorChoice == 0) {
+		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+	}
+	else if(errorChoice == 1) {
+		long randomNumber = randL(100);
 
-	printf("Damage percent: %ld\n", randomNumber);
-	damage = (randomNumber < damPercent);
-	if (!damage) {
-		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
-	} else {
-		data[n % windowSize][0] ^= 0x01;
-		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
-		data[n % windowSize][0] ^= 0x01;
+		if(randomNumber < damPercent) {
+			if (!damage) {
+				net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+			} else {
+				data[n % windowSize][0] ^= 0x01;
+				net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+				data[n % windowSize][0] ^= 0x01;
+			}
+		}
+		else {
+			net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+		}
+	}
+	else {
+
 	}
 
 	uint16_t sum = cksum((uint16_t*) data[n % windowSize], packetSize / 2);
