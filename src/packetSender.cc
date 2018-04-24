@@ -63,7 +63,7 @@ void packetSender::sendFile() {
 
 			// shift all data over
 			for (int i = toBeEncoded; i < windowSize; i++) {
-				data[i - toBeEncoded] = data[i];
+				memcpy(data[i - toBeEncoded], data[i], sizeof(uint8_t) * packetSize);
 				rtTimer[i - toBeEncoded] = rtTimer[i];
 				recieved[i - toBeEncoded] = recieved[i];
 			}
@@ -75,11 +75,14 @@ void packetSender::sendFile() {
 
 				lfs = (sequenceNumber + i) % range;
 			}
+
+			for (int i = 0; i < windowSize; i++)
+				printf("buffer[%d]: %s\n", i, data[i]);
 		} else {
 			for (int i = 0; i < windowSize; i++) {
 				// if a packet hasn't been recieved and is past its timeout, resend it
 				if (rtTimer[i].peek() > timeout && !recieved[i]) {
-					printf("RESENT\n");
+					printf("RESENT buffer[%d]: %s\n", i, data[i]);
 					sendPacket((sequenceNumber + i) % range, i);
 				}
 			}
