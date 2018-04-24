@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "net.h"
 #include "timer.h"
 #include "packetSender.h"
@@ -9,6 +11,8 @@ errorChoice) {
 	this->packetSize = packetSize;
 	this->range = range;
 	this->windowSize = 1;	// TODO: assign other values
+	this->windowOffset = 0;
+	this->timeout = 1000.0;
 	this->hasOverrun = false;
 	this->eof = false;
 	this->filename = filename;
@@ -23,6 +27,8 @@ errorChoice) {
 	for (int i = 0; i < windowSize; i++) {
 		data[i] = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
 	}
+	rtTimer = (timer *) malloc(sizeof(timer) * windowSize);
+	recieved = (bool *) malloc(sizeof(bool) * windowSize);
 
 	file = fopen(filename, "rb");
 
@@ -42,47 +48,72 @@ void packetSender::sendFile() {
 	int lar = 0;	// last acknowledgement recieved
 	int lfs = 0;	// last frame sent
 
-	timer rtTimer[windowSize];
-	
 	while (!(eof && lar == lfs)) {
 		// range [lar, lfs] has already been encoded, encode sws - (lfs - lar) times
 		// if lar is greater than lfs, we have to go back around
 		int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range)); // if this is greater than one, we didn't time out
-
-		// TODO: remove me
-		printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
 
 		bool damagePacket = false;
 		if (errorChoice == 1 || errorChoice == 2) {
 			damagePacket = true;
 		}
 
-		if (toBeEncoded) {
-			for (int i = 0; i < toBeEncoded && !eof; i++) {
-				encodePacket((sequenceNumber + i) % range);
+		if (toBeEncoded && !eof) {
+			printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
 
-				//rtTimer[(sequenceNumber + i) % range].start();
-				sendPacket((sequenceNumber + i) % range, false);
+			// shift all data over
+			for (int i = toBeEncoded; i < windowSize; i++) {
+				data[i - toBeEncoded] = data[i];
+				rtTimer[i - toBeEncoded] = rtTimer[i];
+				recieved[i - toBeEncoded] = recieved[i];
+			}
+
+			for (int i = windowSize - toBeEncoded; i < windowSize && !eof; i++) {
+				printf("encoding packet #%d (buffer[%d])\n", sequenceNumber + i, i);
+				encodePacket((sequenceNumber + i) % range, i);
+				sendPacket((sequenceNumber + i) % range, i);
+
+				lfs = (sequenceNumber + i) % range;
 			}
 		} else {
 			for (int i = 0; i < windowSize; i++) {
-				//rtTimer[(sequenceNumber + i) % range].start();
-				sendPacket((sequenceNumber + i) % range, false);
+				// if a packet hasn't been recieved and is past its timeout, resend it
+				if (rtTimer[i].peek() > timeout && !recieved[i]) {
+					printf("RESENT\n");
+					sendPacket((sequenceNumber + i) % range, i);
+				}
 			}
 		}
 
-		lfs = (sequenceNumber + sws - 1) % range;
+		printf("lfs = %d\n", lfs);
+
+		// find closest timer to timeout
+		double oldest = 0.0;
+		for (int i = 0; i < windowSize; i++) {
+			oldest = std::max(rtTimer[i].peek(), oldest);
+		}
 
 		// now get ack TODO: set timeout
-		//int oldlar = lar;
-		lar = recieveAck();
+		// recieve ack with shortest remaining timeout
+		//if (recieveAck(timeout - oldest) == sequenceNumber) 
+			//lar = sequenceNumber;
 
-		/*for (int i = oldlar; i < (lar >= oldlar) ? lar : lar + range; i++) {
-			double rtt = rtTimer[i].end();
-			printf("RTT: %fms\n\n", rtt);	// TODO: display packet number??
+		// set lar to largest recieved frame
+		/*for (int i = 0; i < sws; i++) {
+			if (!recieved[i]) {
+				lar = sequenceNumber + i;
+				break;
+			}
+			//lar++;
 		}*/
+		//lar %= range;
 
-		sequenceNumber = lar + 1 % range;
+		int ack = recieveAck(timeout - oldest);
+
+		if (ack != -1)
+			lar = ack;
+
+		sequenceNumber = (lar + 1) % range;
 	}
 
 	double totalTime = totalTimer.end();
@@ -90,8 +121,9 @@ void packetSender::sendFile() {
 	printEndStats(totalTime);
 }
 
-void packetSender::encodePacket(int n) {
-	uint8_t *buffer = data[n % windowSize];
+void packetSender::encodePacket(int n, int windowOffset) {
+	recieved[windowOffset] = false;
+	uint8_t *buffer = data[windowOffset];
 
 	// encode buffer - insert escape bytes
 	int i = 0;
@@ -125,37 +157,37 @@ void packetSender::encodePacket(int n) {
 			i++;
 		}
 	}
-	printf("buffer: %s\n", buffer);
+	//printf("buffer: %s\n", buffer);
 }
 
-void packetSender::sendPacket(int n, bool damage) {
+void packetSender::sendPacket(int n, int windowOffset) {
+	rtTimer[windowOffset].start();
+
 	net_write(&n, sizeof(int), sockfd);
 	net_write(&src, sizeof(uint32_t), sockfd);
 	net_write(&dst, sizeof(uint32_t), sockfd);
 	if(errorChoice == 0) {
-		net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+		net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
 	}
 	else if(errorChoice == 1) {
 		long randomNumber = randL(100);
 
 		if(randomNumber < damPercent) {
-			if (!damage) {
-				net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
-			} else {
-				data[n % windowSize][0] ^= 0x01;
-				net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
-				data[n % windowSize][0] ^= 0x01;
-			}
+			data[windowOffset][0] ^= 0x01;
+			net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
+			data[windowOffset][0] ^= 0x01;
 		}
 		else {
-			net_write(data[n % windowSize], sizeof(uint8_t) * packetSize, sockfd);
+			net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
 		}
 	}
 	else {
 
 	}
 
-	uint16_t sum = cksum((uint16_t*) data[n % windowSize], packetSize / 2);
+	printf("buffer: %s\n", data[windowOffset]);
+
+	uint16_t sum = cksum((uint16_t*) data[windowOffset], packetSize / 2);
 	printf("checksum: %d\n", sum);
 	net_write(&sum, sizeof(uint16_t), sockfd);
 
@@ -166,13 +198,27 @@ void packetSender::sendPacket(int n, bool damage) {
 	packetsSent++;
 }
 
-int packetSender::recieveAck() {
-	int n;
-	net_read(&n, sizeof(int), sockfd);
+int packetSender::recieveAck(double timeout) {
+	if (net_wait(timeout, sockfd)) {
+		int n;
+		net_read(&n, sizeof(int), sockfd);
 
-	printf("Ack %d recieved.\n", n);
+		printf("Ack %d recieved.\n", n);
 
-	return n;
+		if (n < sequenceNumber)
+			n += range;
+
+		if (n >= sequenceNumber && n <= sequenceNumber + windowSize) {
+			double rtt = rtTimer[n - sequenceNumber].end();
+			printf("RTT: %fms\n\n", rtt);
+
+			recieved[n - sequenceNumber] = true;
+		}
+
+		return n % range;
+	}
+	
+	return -1;
 }
 void packetSender::printEndStats(double totalTime) {
 	printf("Packet size: %d bytes\n", packetSize);

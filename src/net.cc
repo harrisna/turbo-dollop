@@ -112,6 +112,24 @@ void net_read(void* x, size_t sz, int sockfd) {
 	}
 }
 
+int net_wait(double timeout, int sockfd) {
+	fd_set read_fds, write_fds, err_fds;
+	FD_ZERO(&read_fds);	
+	FD_ZERO(&write_fds);	
+	FD_ZERO(&err_fds);	
+	FD_SET(sockfd, &read_fds);
+
+	struct timeval tv;
+	tv.tv_sec = 1;
+	//tv.tv_usec = timeout / 1000000.0;
+	tv.tv_usec = 0;
+
+	printf("%ld %d\n", tv.tv_sec, tv.tv_usec);
+	//exit(1);
+
+	return select(sockfd + 1, &read_fds, &write_fds, &err_fds, &tv);
+}
+
 uint32_t net_getaddr(int sockfd) {
 	struct sockaddr_in cli_addr;
 	socklen_t clilen = sizeof(cli_addr);

@@ -5,12 +5,16 @@
 #include <stdint.h>
 #include <cstring>
 
+#include "timer.h"
+
 class packetSender {
 private:
 	int sockfd;
 	int packetSize;
 	int range;
 	int windowSize;
+	int windowOffset;
+	double timeout;
 	uint32_t src;
 	uint32_t dst;
 	char* filename;
@@ -20,6 +24,8 @@ private:
 	int* errorBuffer;
 	int encoded;	// last encoded packet
 	uint8_t **data;
+	timer *rtTimer;
+	bool *recieved;
 
 	bool hasOverrun;
 	uint8_t overrun;
@@ -36,9 +42,9 @@ private:
 public:
 	packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent, int* errorBuffer, int
 	errorChoice);
-	void encodePacket(int n);
-	void sendPacket(int n, bool damage);
-	int recieveAck();
+	void encodePacket(int n, int windowOffset);
+	void sendPacket(int n, int windowOffset);
+	int recieveAck(double timeout);
 
 	void sendFile();
 };

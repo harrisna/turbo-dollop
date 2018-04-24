@@ -69,8 +69,8 @@ void packetReciever::recievePacket() {
 	net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
 	net_read(&sum, sizeof(uint16_t), sockfd);
 
-	printf("%s\n", buffer);
 	printf("Expected seq#: %d\n", sequenceNumber);
+	printf("%s\n", buffer);
 
 	char ipstr[IPSTRLEN];
 	net_addrstr(src, ipstr, IPSTRLEN);
