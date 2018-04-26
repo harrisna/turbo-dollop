@@ -40,7 +40,7 @@ private:
 	void printEndStats(double totalTime);
 
 public:
-	packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent, int* errorBuffer, int
+	packetSender(int sockfd, int packetSize, int range, int windowSize, char* filename, long damPercent, int* errorBuffer, int
 	errorChoice);
 	void encodePacket(int n, int windowOffset);
 	void sendPacket(int n, int windowOffset);

@@ -5,12 +5,12 @@
 #include "packetSender.h"
 #include "rand.h"
 
-packetSender::packetSender(int sockfd, int packetSize, int range, char* filename, long damPercent, int* errorBuffer, int
+packetSender::packetSender(int sockfd, int packetSize, int range, int windowSize, char* filename, long damPercent, int* errorBuffer, int
 errorChoice) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
-	this->windowSize = 2;	// TODO: assign other values
+	this->windowSize = windowSize;
 	this->windowOffset = 0;
 	this->timeout = 1000.0;
 	this->hasOverrun = false;
@@ -29,7 +29,8 @@ errorChoice) {
 	}
 	rtTimer = (timer *) malloc(sizeof(timer) * windowSize);
 	recieved = (bool *) malloc(sizeof(bool) * windowSize);
-	memset(recieved, 0, sizeof(bool) * windowSize);
+	// set all packets as recieved
+	memset(recieved, true, sizeof(bool) * windowSize);
 
 	file = fopen(filename, "rb");
 
@@ -50,8 +51,9 @@ void packetSender::sendFile() {
 	int lfs = 0;	// last frame sent
 
 	int adv = windowSize;	// number of packets to encode
+	bool flushed = false;	// true if all recieved array is true, meaning all packets have been successfully sent
 
-	while (!(eof && lar == lfs)) {
+	while (!(eof && flushed)) {
 		// range [lar, lfs] has already been encoded, encode sws - (lfs - lar) times
 		// if lar is greater than lfs, we have to go back around
 		//int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range)); // if this is greater than one, we didn't time out
@@ -63,7 +65,7 @@ void packetSender::sendFile() {
 
 		// FIXME: if eof, actually finish
 		// we need some way to know that something is the last packet
-		if (adv && !eof) {
+		if (adv) {
 			printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", adv, sequenceNumber, windowSize, lar, lfs);
 
 			// shift all data over
@@ -71,12 +73,13 @@ void packetSender::sendFile() {
 				memcpy(data[i - adv], data[i], sizeof(uint8_t) * packetSize);
 				rtTimer[i - adv] = rtTimer[i];
 				recieved[i - adv] = recieved[i];
+				recieved[i] = true;
 			}
 
 			// zero moved data
-			for (int i = windowSize - adv; i < windowSize; i++) {
+			/*for (int i = windowSize - adv; i < windowSize; i++) {
 				recieved[i] = true;
-			}
+			}*/
 
 			for (int i = windowSize - adv; i < windowSize && !eof; i++) {
 				printf("encoding packet #%d (buffer[%d])\n", sequenceNumber + i, i);
@@ -122,6 +125,15 @@ void packetSender::sendFile() {
 			sequenceNumber %= range;
 
 			printf("sequenceNumber increased: %d lar: %d\n", sequenceNumber, lar);
+		}
+
+		flushed = true;
+		for (int i = 0; i < windowSize; i++) {
+			printf("recieved[%d] = %d\n", i, recieved[i]);
+			if (!recieved[i]) {
+				flushed = false;
+				//break;
+			}
 		}
 	}
 

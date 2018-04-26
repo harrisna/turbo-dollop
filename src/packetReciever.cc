@@ -9,7 +9,7 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	this->packetsReceived = 0;
 	this->filename = filename;
 
-	this->windowSize = 2;
+	this->windowSize = 1;
 
 	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
 	recieved = (bool *) malloc(sizeof(bool *) * windowSize);
@@ -34,19 +34,23 @@ void packetReciever::recieveFile() {
 	int lfr = 0;		// last frame recieved
 	int laf = 0;		// last acceptable frame (last ack sent)
 
-	// FIXME: if eof received but not prev packet, we'll finish early
-	while (!eof) {
-		// recieve pkt
-		// send ack(n)
-		// if pkt > expected, but less than expected + sws, buffer
-		// if pkt == expected, increase expected
-		// else, ignore
+	bool flushed = false;	// true if the recieved array is all false, meaning no packets are buffered
 
-		// recieve packets from laf to laf + sws
+	// FIXME: if eof received but not prev packet, we'll finish early
+	while (!(eof && flushed)) {
+		printf("eof: %d flushed: %d\n", eof, flushed);
+		
+		// recieve pkt
 		recievePacket();
 
-		// increase acks to first missing packet - 1
-		// send ack
+		// check if we have flushed the array
+		flushed = true;
+		for (int i = 0; i < windowSize; i++) {
+			if (recieved[i]) {
+				flushed = false;
+				break;
+			}
+		}
 		
 		printf("\n");
 	}
@@ -125,7 +129,6 @@ void packetReciever::recievePacket() {
 			recieved[idx] = true;
 			sendAck(n);
 			if (n == sequenceNumber) {
-				// TODO: flush buffer
 				int i = 0;
 				while (i < windowSize && recieved[i]) {
 					fwrite(data[i], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
@@ -143,16 +146,9 @@ void packetReciever::recievePacket() {
 					data[j + i] = NULL;
 					recieved[j + i] = false;
 				}
-
-				// zero moved data
-				/*for (int j = windowSize - i; j < windowSize; j++) {
-					recieved[j] = false;
-				}*/
 			}
 		} else {
-			// resend prev ack
-			eof = false;
-			//sendAck(((sequenceNumber + range) - 1) % range);
+			eof = false;	// if we recieved a bad packet with a zero, reset eof flag
 		}
 	} else if (idx < 0 && idx >= -windowSize) {
 		sendAck(n);

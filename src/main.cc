@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
 		scanf("%d", &range);
 		printf("\nEnter packet size (in bytes):\n");
 		scanf("%d", &pktsz);
+		//printf("\nSelect protocol:\n
 		printf("Would you like to damage packets? (y/n)");
 		scanf(" %c", &dam);
 		if(dam == 'y'){
@@ -47,7 +48,7 @@ int main(int argc, char **argv) {
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, pktsz, range, argv[1], damPercent, buffer, errorChoice);
+		packetSender s = packetSender(clifd, pktsz, range, 1, argv[1], damPercent, buffer, errorChoice);
 		s.sendFile();
 	}
 }
