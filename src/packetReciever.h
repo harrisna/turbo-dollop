@@ -11,6 +11,10 @@ private:
 	int packetSize;
 	int range;
 	int packetsReceived;
+	int windowSize;
+
+	uint8_t **data;
+	bool *recieved;
 
 	int sequenceNumber;
 

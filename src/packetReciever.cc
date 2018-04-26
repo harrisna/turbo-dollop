@@ -9,6 +9,12 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	this->packetsReceived = 0;
 	this->filename = filename;
 
+	this->windowSize = 2;
+
+	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
+	recieved = (bool *) malloc(sizeof(bool *) * windowSize);
+	memset(recieved, 0, sizeof(bool) * windowSize);
+
 	this->overrun = false;
 
 	file = fopen(filename, "wb");
@@ -28,6 +34,7 @@ void packetReciever::recieveFile() {
 	int lfr = 0;		// last frame recieved
 	int laf = 0;		// last acceptable frame (last ack sent)
 
+	// FIXME: if eof received but not prev packet, we'll finish early
 	while (!eof) {
 		// recieve pkt
 		// send ack(n)
@@ -36,9 +43,7 @@ void packetReciever::recieveFile() {
 		// else, ignore
 
 		// recieve packets from laf to laf + sws
-		for (int i = 0; i < rws; i++) {
-			recievePacket();
-		}
+		recievePacket();
 
 		// increase acks to first missing packet - 1
 		// send ack
@@ -83,7 +88,12 @@ void packetReciever::recievePacket() {
 	uint8_t *decoded = (uint8_t *) calloc(packetSize, sizeof(uint8_t));	
 	int di = 0;
 
-	if (n == sequenceNumber) {
+	// FIXME: what about wraps?
+	int idx = n - sequenceNumber;
+	if (idx < 0 && idx + range < windowSize)
+		idx += range;
+
+	if (idx >= 0 && idx < windowSize) {
 		// decode the buffer
 		int i = 0;
 		if (overrun) {
@@ -109,18 +119,45 @@ void packetReciever::recievePacket() {
 
 		printf("checksum: %d\n", cksum((uint16_t*) buffer, packetSize / 2));
 		packetGood = (sum == cksum((uint16_t*) buffer, packetSize / 2));
-		printf("packetgood: %d\n", packetGood);
+
+		if (packetGood) {
+			data[idx] = decoded;
+			recieved[idx] = true;
+			sendAck(n);
+			if (n == sequenceNumber) {
+				// TODO: flush buffer
+				int i = 0;
+				while (i < windowSize && recieved[i]) {
+					fwrite(data[i], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
+					free(data[i]);
+					recieved[i] = false;
+
+					i++;
+					incrementSequenceNumber();
+				}
+
+				// shift data over
+				for (int j = 0; j < windowSize - i; j++) {
+					data[j] = data[j + i];
+					recieved[j] = recieved[j + i];
+					data[j + i] = NULL;
+					recieved[j + i] = false;
+				}
+
+				// zero moved data
+				/*for (int j = windowSize - i; j < windowSize; j++) {
+					recieved[j] = false;
+				}*/
+			}
+		} else {
+			// resend prev ack
+			eof = false;
+			//sendAck(((sequenceNumber + range) - 1) % range);
+		}
+	} else if (idx < 0 && idx >= -windowSize) {
+		sendAck(n);
 	}
 
-	if (packetGood) {
-		fwrite(decoded, sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
-		sendAck(sequenceNumber);
-		incrementSequenceNumber();
-	} else {
-		// resend prev ack
-		eof = false;
-		sendAck(((sequenceNumber + range) - 1) % range);
-	}
 
 	free(buffer);
 }

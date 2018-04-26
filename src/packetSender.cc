@@ -10,7 +10,7 @@ errorChoice) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
-	this->windowSize = 1;	// TODO: assign other values
+	this->windowSize = 2;	// TODO: assign other values
 	this->windowOffset = 0;
 	this->timeout = 1000.0;
 	this->hasOverrun = false;
@@ -29,6 +29,7 @@ errorChoice) {
 	}
 	rtTimer = (timer *) malloc(sizeof(timer) * windowSize);
 	recieved = (bool *) malloc(sizeof(bool) * windowSize);
+	memset(recieved, 0, sizeof(bool) * windowSize);
 
 	file = fopen(filename, "rb");
 
@@ -48,33 +49,44 @@ void packetSender::sendFile() {
 	int lar = 0;	// last acknowledgement recieved
 	int lfs = 0;	// last frame sent
 
+	int adv = windowSize;	// number of packets to encode
+
 	while (!(eof && lar == lfs)) {
 		// range [lar, lfs] has already been encoded, encode sws - (lfs - lar) times
 		// if lar is greater than lfs, we have to go back around
-		int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range)); // if this is greater than one, we didn't time out
+		//int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range)); // if this is greater than one, we didn't time out
 
 		bool damagePacket = false;
 		if (errorChoice == 1 || errorChoice == 2) {
 			damagePacket = true;
 		}
 
-		if (toBeEncoded && !eof) {
-			printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", toBeEncoded, sequenceNumber, windowSize, lar, lfs);
+		// FIXME: if eof, actually finish
+		// we need some way to know that something is the last packet
+		if (adv && !eof) {
+			printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", adv, sequenceNumber, windowSize, lar, lfs);
 
 			// shift all data over
-			for (int i = toBeEncoded; i < windowSize; i++) {
-				memcpy(data[i - toBeEncoded], data[i], sizeof(uint8_t) * packetSize);
-				rtTimer[i - toBeEncoded] = rtTimer[i];
-				recieved[i - toBeEncoded] = recieved[i];
+			for (int i = adv; i < windowSize; i++) {
+				memcpy(data[i - adv], data[i], sizeof(uint8_t) * packetSize);
+				rtTimer[i - adv] = rtTimer[i];
+				recieved[i - adv] = recieved[i];
 			}
 
-			for (int i = windowSize - toBeEncoded; i < windowSize && !eof; i++) {
+			// zero moved data
+			for (int i = windowSize - adv; i < windowSize; i++) {
+				recieved[i] = true;
+			}
+
+			for (int i = windowSize - adv; i < windowSize && !eof; i++) {
 				printf("encoding packet #%d (buffer[%d])\n", sequenceNumber + i, i);
 				encodePacket((sequenceNumber + i) % range, i);
 				sendPacket((sequenceNumber + i) % range, i);
 
 				lfs = (sequenceNumber + i) % range;
 			}
+
+			adv = 0;
 
 			for (int i = 0; i < windowSize; i++)
 				printf("buffer[%d]: %s\n", i, data[i]);
@@ -96,27 +108,21 @@ void packetSender::sendFile() {
 			oldest = std::max(rtTimer[i].peek(), oldest);
 		}
 
-		// now get ack TODO: set timeout
-		// recieve ack with shortest remaining timeout
-		//if (recieveAck(timeout - oldest) == sequenceNumber) 
-			//lar = sequenceNumber;
-
-		// set lar to largest recieved frame
-		/*for (int i = 0; i < sws; i++) {
-			if (!recieved[i]) {
-				lar = sequenceNumber + i;
-				break;
-			}
-			//lar++;
-		}*/
-		//lar %= range;
-
 		int ack = recieveAck(timeout - oldest);
 
-		if (ack != -1)
-			lar = ack;
+		if (ack != -1) {
+			// find largest ack, advancing lar
+			printf("sequenceNumber increased: %d lar: %d\n", sequenceNumber, lar);
+			adv = 0;
+			while (adv < windowSize && recieved[adv]) {
+				adv++;
+			}
 
-		sequenceNumber = (lar + 1) % range;
+			sequenceNumber += adv;
+			sequenceNumber %= range;
+
+			printf("sequenceNumber increased: %d lar: %d\n", sequenceNumber, lar);
+		}
 	}
 
 	double totalTime = totalTimer.end();
@@ -220,7 +226,7 @@ int packetSender::recieveAck(double timeout) {
 
 		return n % range;
 	}
-	
+	printf("ACK timeout\n");
 	return -1;
 }
 void packetSender::printEndStats(double totalTime) {
