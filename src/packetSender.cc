@@ -5,7 +5,8 @@
 #include "packetSender.h"
 #include "rand.h"
 
-packetSender::packetSender(int sockfd, int packetSize, int range, int windowSize, char* filename, long damPercent, int* errorBuffer, int
+packetSender::packetSender(int sockfd, int packetSize, int range, int windowSize, char* filename, long damPercent,
+std::vector<int> errors, int
 errorChoice) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
@@ -19,6 +20,7 @@ errorChoice) {
 	this->damPercent = damPercent;
 	this->errorChoice = errorChoice;
 	sequenceNumber = 0;
+	this->errors = errors;
 
 	this->packetsSent = 0;
 	

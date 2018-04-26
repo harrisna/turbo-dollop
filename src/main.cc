@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 		char dam;
 		long damPercent;
 		int errorChoice = 0;
-		int* buffer;
+		std::vector<int> errors;
 
 		printf("Enter a sequence number range:\n");
 		scanf("%d", &range);
@@ -35,10 +35,9 @@ int main(int argc, char **argv) {
 				printf("Enter the packet numbers you'd like damaged. Enter -1 to finish\n");
 				int specificDamage;
 				int i = 0;
-				int* buffer = (int*) malloc(sizeof(int) * 30);
 				scanf("%d", &specificDamage);
 				while(specificDamage != -1) {
-					buffer[i] = scanf("%d", &specificDamage);
+					errors.push_back(scanf("%d", &specificDamage));
 				}
 				errorChoice = 2;
 			}
@@ -48,7 +47,7 @@ int main(int argc, char **argv) {
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, pktsz, range, 1, argv[1], damPercent, buffer, errorChoice);
+		packetSender s = packetSender(clifd, pktsz, range, 1, argv[1], damPercent, errors, errorChoice);
 		s.sendFile();
 	}
 }
