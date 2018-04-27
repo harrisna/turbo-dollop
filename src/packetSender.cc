@@ -236,7 +236,27 @@ void packetSender::sendPacket(int n, int windowOffset) {
 		}
 	}
 	else {
+		std::vector <int> :: iterator j;
+		int count = 1;
+		bool damaged = false;
+		for(j = errors.begin(); j != errors.end(); ++j) {
+			if(*j == n) {
+				damaged = true;
+				errors.erase(errors.begin() + count-1);
+				goto out;
+			}
+			count++;
+		}
+		out:
 
+		if(damaged) {
+			data[windowOffset][0] ^= 0x01;
+			net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
+			data[windowOffset][0] ^= 0x01;
+		}
+		else {
+			net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
+		}
 	}
 
 	printf("buffer: %s\n", data[windowOffset]);
