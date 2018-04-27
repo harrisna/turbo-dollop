@@ -137,7 +137,9 @@ void packetSender::sendFile() {
 		// find closest timer to timeout
 		double oldest = 0.0;
 		for (int i = 0; i < windowSize; i++) {
-			oldest = std::max(rtTimer[i].peek(), oldest);
+			double telapsed = rtTimer[i].peek();
+			if (telapsed < timeout)
+				oldest = std::max(telapsed, oldest);
 		}
 
 		int ack = recieveAck(timeout - oldest);
