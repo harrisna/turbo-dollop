@@ -135,22 +135,23 @@ void packetReciever::recievePacket() {
 			recieved[idx] = true;
 			sendAck(n);
 			if (n == sequenceNumber) {
-				int i = 0;
-				while (i < windowSize && recieved[i]) {
-					fwrite(data[i], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
-					free(data[i]);
-					recieved[i] = false;
+				int adv = 0;
+				while (adv < windowSize && recieved[adv]) {
+					printf("adv = %d\n", adv);
+					fwrite(data[adv], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
+					free(data[adv]);
+					recieved[adv] = false;
 
-					i++;
+					adv++;
 					incrementSequenceNumber();
 				}
 
 				// shift data over
-				for (int j = 0; j < windowSize - i; j++) {
-					data[j] = data[j + i];
-					recieved[j] = recieved[j + i];
-					data[j + i] = NULL;
-					recieved[j + i] = false;
+				for (int j = 0; j < windowSize - adv; j++) {
+					data[j] = data[j + adv];
+					recieved[j] = recieved[j + adv];
+					data[j + adv] = NULL;
+					recieved[j + adv] = false;
 				}
 			}
 		} else {

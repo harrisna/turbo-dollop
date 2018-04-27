@@ -137,9 +137,11 @@ void packetSender::sendFile() {
 		// find closest timer to timeout
 		double oldest = 0.0;
 		for (int i = 0; i < windowSize; i++) {
-			double telapsed = rtTimer[i].peek();
-			if (telapsed < timeout)
-				oldest = std::max(telapsed, oldest);
+			if (!recieved[i]) {
+				double telapsed = rtTimer[i].peek();
+				if (telapsed < timeout)
+					oldest = std::max(telapsed, oldest);
+			}
 		}
 
 		int ack = recieveAck(timeout - oldest);
@@ -251,6 +253,7 @@ void packetSender::sendPacket(int n, int windowOffset) {
 }
 
 int packetSender::recieveAck(double timeout) {
+	printf("TESTING???\n");
 	if (net_wait(timeout, sockfd)) {
 		int n;
 		net_read(&n, sizeof(int), sockfd);
