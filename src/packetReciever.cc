@@ -11,10 +11,6 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 
 	//this->windowSize = 1;
 
-	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
-	recieved = (bool *) malloc(sizeof(bool *) * windowSize);
-	memset(recieved, 0, sizeof(bool) * windowSize);
-
 	this->overrun = false;
 
 	file = fopen(filename, "wb");
@@ -26,6 +22,13 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	for (int i = 0; i < 10; i++) {
 		uint8_t png;
 		net_read(&png, sizeof(uint8_t), sockfd);
+		net_write(&png, sizeof(uint8_t), sockfd);
+	}
+
+	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
+	recieved = (bool *) malloc(sizeof(bool *) * windowSize);
+	for (int i = 0; i < windowSize; i++) {
+		recieved[i] = false;
 	}
 
 	sequenceNumber = 0;
@@ -98,10 +101,11 @@ void packetReciever::recievePacket() {
 	uint8_t *decoded = (uint8_t *) calloc(packetSize, sizeof(uint8_t));	
 	int di = 0;
 
-	// FIXME: what about wraps?
 	int idx = n - sequenceNumber;
 	if (idx < 0 && idx + range < windowSize)
 		idx += range;
+
+	printf("idx = %d\n", idx);
 
 	if (idx >= 0 && idx < windowSize) {
 		// decode the buffer
@@ -133,13 +137,19 @@ void packetReciever::recievePacket() {
 		if (packetGood) {
 			data[idx] = decoded;
 			recieved[idx] = true;
+			printf("idx %d marked true\n", idx);
 			sendAck(n);
 			if (n == sequenceNumber) {
 				int adv = 0;
 				while (adv < windowSize && recieved[adv]) {
-					printf("adv = %d\n", adv);
+					printf("adv = %d, recieved = %d\n", adv, recieved[adv]);
+
+					if (data[adv] == NULL)
+						printf("???\n");
+					
 					fwrite(data[adv], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
 					free(data[adv]);
+					data[adv] = NULL;
 					recieved[adv] = false;
 
 					adv++;
@@ -147,17 +157,29 @@ void packetReciever::recievePacket() {
 				}
 
 				// shift data over
-				for (int j = 0; j < windowSize - adv; j++) {
-					data[j] = data[j + adv];
-					recieved[j] = recieved[j + adv];
-					data[j + adv] = NULL;
-					recieved[j + adv] = false;
+				printf("SHIFT!!!\n");
+				for (int j = 0; j < windowSize; j++) {
+					printf("recieved[%d] = %d\n", j, recieved[j]);
 				}
+				for (int j = adv; j < windowSize; j++) {
+					data[j - adv] = data[j];
+					data[j] = NULL;
+					recieved[j - adv] = recieved[j];
+					recieved[j] = false;
+				}
+				for (int j = 0; j < windowSize; j++) {
+					printf("recieved[%d] = %d\n", j, recieved[j]);
+				}
+			}
+
+			for (int j = 0; j < windowSize; j++) {
+				printf("recieved[%d] = %d\n", j, recieved[j]);
 			}
 		} else {
 			eof = false;	// if we recieved a bad packet with a zero, reset eof flag
 		}
 	} else if (idx < 0 && idx >= -windowSize) {
+		printf("OLD!!!\n");
 		sendAck(n);
 	}
 

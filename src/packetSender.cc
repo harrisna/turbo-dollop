@@ -33,7 +33,9 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	rtTimer = (timer *) malloc(sizeof(timer) * windowSize);
 	recieved = (bool *) malloc(sizeof(bool) * windowSize);
 	// set all packets as recieved
-	memset(recieved, true, sizeof(bool) * windowSize);
+	for (int i = 0; i < windowSize; i++) {
+		recieved[i] = true;
+	}
 
 	file = fopen(filename, "rb");
 
@@ -56,10 +58,13 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	for (int i = 0; i < 10; i++) {
 		uint8_t png = 0xff;
 		net_write(&png, sizeof(uint8_t), sockfd);
+		net_read(&png, sizeof(uint8_t), sockfd);
 	}
 
-	if (this->timeout <= 0.0)
+	if (this->timeout <= 0.0) {
 		this->timeout = (pingTimer.end() / 10.0) * 2.0;	// double avg for safety
+		this->timeout = std::max(this->timeout, 1.0);
+	}
 }
 
 // TODO: pass/open file here
@@ -84,7 +89,6 @@ void packetSender::sendFile() {
 			damagePacket = true;
 		}
 
-		// FIXME: if eof, actually finish
 		// we need some way to know that something is the last packet
 		if (adv) {
 			printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", adv, sequenceNumber, windowSize, lar, lfs);
