@@ -69,12 +69,6 @@ void packetReciever::recieveFile() {
 	printEndStats(totalTime);
 }
 
-void packetReciever::incrementSequenceNumber() {
-	sequenceNumber++;
-	sequenceNumber %= range;
-	packetsReceived++;
-}
-
 void packetReciever::recievePacket() {
 	int n;
 	uint32_t src, dst;
@@ -152,7 +146,8 @@ void packetReciever::recievePacket() {
 					recieved[adv] = false;
 
 					adv++;
-					incrementSequenceNumber();
+					sequenceNumber++;
+					sequenceNumber %= range;
 
 					packetsReceived++;
 					retransmitsReceived--;

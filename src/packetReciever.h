@@ -26,7 +26,6 @@ private:
 
 	FILE *file;
 	void printEndStats(double totalTime);
-	void incrementSequenceNumber();
 
 public:
 	packetReciever(int sockfd, char* filename);
