@@ -10,46 +10,50 @@
 
 class packetSender {
 private:
+	// constants
 	int sockfd;
 	int packetSize;
 	int range;
 	int windowSize;
-	int windowOffset;
 	double timeout;
+
+	// constant strings
 	uint32_t src;
 	uint32_t dst;
 	char* filename;
-	int packetsSent;
+
+	// error
 	long damPercent;
 	int errorChoice;
 	int* errorBuffer;
-	int encoded;	// last encoded packet
+
+	// arrays
 	uint8_t **data;
 	timer *rtTimer;
 	bool *recieved;
 	std::vector<int> errors;
 
+	// state
 	bool hasOverrun;
 	uint8_t overrun;
-
-	bool eof;
-
+	int packetsSent;
 	int sequenceNumber;
+	bool eof;
 
 	FILE *file;
 
 	int getSequenceNumber();
 	void printEndStats(double totalTime);
 
+	void encodePacket(int n, int windowOffset);
+	void sendPacket(int n, int windowOffset);
+	int recieveAck(double timeout);
+
 public:
 	packetSender(int sockfd, int packetSize, int range, 
 		int windowSize, bool recieverWindow, 
 		double timeout, char* filename, 
 		long damPercent, std::vector<int> errors, int errorChoice);
-	
-	void encodePacket(int n, int windowOffset);
-	void sendPacket(int n, int windowOffset);
-	int recieveAck(double timeout);
 
 	void sendFile();
 };

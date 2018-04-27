@@ -122,11 +122,7 @@ int net_wait(double timeout, int sockfd) {
 	struct timeval tv;
 	tv.tv_sec = timeout / 1000;
 	timeout -= tv.tv_sec;
-	//tv.tv_usec = timeout / 1000000.0;
 	tv.tv_usec = timeout * 1000;
-
-	printf("%f = %ld %d\n", timeout, tv.tv_sec, tv.tv_usec);
-	//exit(1);
 
 	return select(sockfd + 1, &read_fds, &write_fds, &err_fds, &tv);
 }

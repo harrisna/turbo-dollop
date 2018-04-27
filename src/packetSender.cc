@@ -13,19 +13,18 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	this->packetSize = packetSize;
 	this->range = range;
 	this->windowSize = windowSize;
-	this->windowOffset = 0;
 	this->timeout = timeout;
-	this->hasOverrun = false;
-	this->eof = false;
 	this->filename = filename;
+
 	this->damPercent = damPercent;
 	this->errorChoice = errorChoice;
-	sequenceNumber = 0;
 	this->errors = errors;
 
 	this->packetsSent = 0;
+	sequenceNumber = 0;
+	this->eof = false;
+	this->hasOverrun = false;
 	
-	encoded = 0;
 	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
 	for (int i = 0; i < windowSize; i++) {
 		data[i] = (uint8_t *) malloc(sizeof(uint8_t) * packetSize);
@@ -67,31 +66,16 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	}
 }
 
-// TODO: pass/open file here
 void packetSender::sendFile() {
 	timer totalTimer;
 	totalTimer.start();
 
-	int sws = windowSize;	// sending window size
-	int lar = 0;	// last acknowledgement recieved
-	int lfs = 0;	// last frame sent
-
-	int adv = windowSize;	// number of packets to encode
+	int adv = windowSize;	// number of packets to encode/advance the window
 	bool flushed = false;	// true if all recieved array is true, meaning all packets have been successfully sent
 
 	while (!(eof && flushed)) {
-		// range [lar, lfs] has already been encoded, encode sws - (lfs - lar) times
-		// if lar is greater than lfs, we have to go back around
-		//int toBeEncoded = sws - (lfs - ((lfs >= lar) ? lar : lar - range)); // if this is greater than one, we didn't time out
-
-		bool damagePacket = false;
-		if (errorChoice == 1 || errorChoice == 2) {
-			damagePacket = true;
-		}
-
-		// we need some way to know that something is the last packet
 		if (adv) {
-			printf("needed: %d, sequence number: %d, window size: %d, lar: %d, lfs: %d\n", adv, sequenceNumber, windowSize, lar, lfs);
+			//printf("needed: %d, sequence number: %d, window size: %d\n", adv, sequenceNumber, windowSize);
 
 			// shift all data over
 			for (int i = adv; i < windowSize; i++) {
@@ -101,42 +85,24 @@ void packetSender::sendFile() {
 				recieved[i] = true;
 			}
 
-			// zero moved data
-			/*for (int i = windowSize - adv; i < windowSize; i++) {
-				recieved[i] = true;
-			}*/
-
 			for (int i = windowSize - adv; i < windowSize && !eof; i++) {
-				printf("encoding packet #%d (buffer[%d])\n", sequenceNumber + i, i);
 				encodePacket((sequenceNumber + i) % range, i);
 				sendPacket((sequenceNumber + i) % range, i);
-
-				lfs = (sequenceNumber + i) % range;
+				printf("Packet %d sent\n", (sequenceNumber + i) % range);
 			}
 
-			adv = 0;
-
-			for (int i = 0; i < windowSize; i++)
-				printf("buffer[%d]: %s\n", i, data[i]);
-		} else {
-			/*for (int i = 0; i < windowSize; i++) {
-				// if a packet hasn't been recieved and is past its timeout, resend it
-				if (rtTimer[i].peek() > timeout && !recieved[i]) {
-					printf("RESENT buffer[%d]: %s\n", i, data[i]);
-					sendPacket((sequenceNumber + i) % range, i);
-				}
-			}*/
-		}
+			adv = 0;	// now that we've advanced the window, reset adv
+		} 
 
 		for (int i = 0; i < windowSize; i++) {
 			// if a packet hasn't been recieved and is past its timeout, resend it
 			if (rtTimer[i].peek() > timeout && !recieved[i]) {
-				printf("RESENT buffer[%d]: %s\n", i, data[i]);
+				printf("Packet %d *****Timed Out *****\n", (sequenceNumber + i) % range);
 				sendPacket((sequenceNumber + i) % range, i);
+				printf("Packet %d Re-transmitted.\n", (sequenceNumber + i) % range);
+				//numRetransmit++;
 			}
 		}
-
-		printf("lfs = %d\n", lfs);
 
 		// find closest timer to timeout
 		double oldest = 0.0;
@@ -148,11 +114,8 @@ void packetSender::sendFile() {
 			}
 		}
 
-		int ack = recieveAck(timeout - oldest);
-
-		if (ack != -1) {
-			// find largest ack, advancing lar
-			printf("sequenceNumber increased: %d lar: %d\n", sequenceNumber, lar);
+		// if we received a valid ack, check if we can advance the window
+		if (recieveAck(timeout - oldest) != -1) {
 			adv = 0;
 			while (adv < windowSize && recieved[adv]) {
 				adv++;
@@ -161,18 +124,23 @@ void packetSender::sendFile() {
 			sequenceNumber += adv;
 			sequenceNumber %= range;
 
-			printf("sequenceNumber increased: %d lar: %d\n", sequenceNumber, lar);
+			// print current window
+			printf("Current window = [");
+			for (int i = 0; i < windowSize - 1; i++) 
+				printf("%d, ", (sequenceNumber + i) % range);
+			printf("%d]\n", (sequenceNumber + windowSize - 1) % range);
 		}
 
 		flushed = true;
 		for (int i = 0; i < windowSize; i++) {
-			printf("recieved[%d] = %d\n", i, recieved[i]);
 			if (!recieved[i]) {
 				flushed = false;
-				//break;
+				break;
 			}
 		}
 	}
+
+	printf("Session successfully terminated\n\n");
 
 	double totalTime = totalTimer.end();
 	fclose(file);
@@ -215,7 +183,6 @@ void packetSender::encodePacket(int n, int windowOffset) {
 			i++;
 		}
 	}
-	//printf("buffer: %s\n", buffer);
 }
 
 void packetSender::sendPacket(int n, int windowOffset) {
@@ -231,6 +198,7 @@ void packetSender::sendPacket(int n, int windowOffset) {
 		long randomNumber = randL(100);
 
 		if(randomNumber < damPercent) {
+			// toggle first byte lsb
 			data[windowOffset][0] ^= 0x01;
 			net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
 			data[windowOffset][0] ^= 0x01;
@@ -254,6 +222,7 @@ void packetSender::sendPacket(int n, int windowOffset) {
 		out:
 
 		if(damaged) {
+			// toggle first byte lsb
 			data[windowOffset][0] ^= 0x01;
 			net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
 			data[windowOffset][0] ^= 0x01;
@@ -263,43 +232,48 @@ void packetSender::sendPacket(int n, int windowOffset) {
 		}
 	}
 
-	printf("buffer: %s\n", data[windowOffset]);
+	//printf("buffer: %s\n", data[windowOffset]);
 
 	uint16_t sum = cksum((uint16_t*) data[windowOffset], packetSize / 2);
-	printf("checksum: %d\n", sum);
+	//printf("checksum: %d\n", sum);
 	net_write(&sum, sizeof(uint16_t), sockfd);
 
 	char ipstr[IPSTRLEN];
 	net_addrstr(dst, ipstr, IPSTRLEN);
 
-	printf("Packet %d sent to %s.\n", n, ipstr);
+	//printf("Packet %d sent to %s.\n", n, ipstr);
 	packetsSent++;
 }
 
 int packetSender::recieveAck(double timeout) {
-	printf("TESTING???\n");
 	if (net_wait(timeout, sockfd)) {
 		int n;
 		net_read(&n, sizeof(int), sockfd);
 
-		printf("Ack %d recieved.\n", n);
+		printf("Ack %d received ", n);
 
 		if (n < sequenceNumber)
 			n += range;
 
 		if (n >= sequenceNumber && n <= sequenceNumber + windowSize) {
 			double rtt = rtTimer[n - sequenceNumber].end();
-			printf("RTT: %fms\n\n", rtt);
+			printf("(RTT: %fms)\n", rtt);
 
 			recieved[n - sequenceNumber] = true;
 		}
 
 		return n % range;
 	}
-	printf("ACK timeout\n");
+
 	return -1;
 }
 void packetSender::printEndStats(double totalTime) {
+	/* 
+		TODO: change number of packets to number of original packets
+		add number of re-transmitted packets
+		change throughput to total throughput
+		add effective throughput
+	*/ 
 	printf("Packet size: %d bytes\n", packetSize);
 	printf("Number of packets sent: %d\n", packetsSent);
 	printf("Total Time: %fms\n", totalTime);

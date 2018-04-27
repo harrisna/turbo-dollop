@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
 	} else {
 		int range, pktsz, protocol, option;
 		char dam;
-		long damPercent;
+		long damPercent = 0;
 		int errorChoice = 0;
 		std::vector<int> errors;
 
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 			else {
 				printf("Enter the packet numbers you'd like damaged. Enter -1 to finish\n");
 				int specificDamage;
-				int i = 0;
+				//int i = 0;
 				scanf("%d", &specificDamage);
 				while(specificDamage != -1) {
 					errors.push_back(scanf("%d", &specificDamage));

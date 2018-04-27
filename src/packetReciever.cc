@@ -9,8 +9,6 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	this->packetsReceived = 0;
 	this->filename = filename;
 
-	//this->windowSize = 1;
-
 	this->overrun = false;
 
 	file = fopen(filename, "wb");
@@ -38,19 +36,18 @@ void packetReciever::recieveFile() {
 	timer totalTimer;
 	totalTimer.start();
 
-	//int rws = windowSize;	// window size
-	int rws = 1;
-	int lfr = 0;		// last frame recieved
-	int laf = 0;		// last acceptable frame (last ack sent)
-
 	bool flushed = false;	// true if the recieved array is all false, meaning no packets are buffered
 
 	// FIXME: if eof received but not prev packet, we'll finish early
 	while (!(eof && flushed)) {
-		printf("eof: %d flushed: %d\n", eof, flushed);
-		
 		// recieve pkt
 		recievePacket();
+
+		printf("Current window = [");
+		for (int i = 0; i < windowSize - 1; i++) {
+			printf("%d, ", (sequenceNumber + i) % range);
+		}
+		printf("%d]\n", (sequenceNumber + windowSize - 1) % range);
 
 		// check if we have flushed the array
 		flushed = true;
@@ -61,7 +58,7 @@ void packetReciever::recieveFile() {
 			}
 		}
 		
-		printf("\n");
+		//printf("\n");
 	}
 
 	double totalTime = totalTimer.end();
@@ -87,13 +84,13 @@ void packetReciever::recievePacket() {
 	net_read(buffer, sizeof(uint8_t) * packetSize, sockfd);
 	net_read(&sum, sizeof(uint16_t), sockfd);
 
-	printf("Expected seq#: %d\n", sequenceNumber);
-	printf("%s\n", buffer);
+	//printf("Expected seq#: %d\n", sequenceNumber);
 
 	char ipstr[IPSTRLEN];
 	net_addrstr(src, ipstr, IPSTRLEN);
 
-	printf("Packet %d recieved from %s.\n", n, ipstr);
+	//printf("Packet %d recieved from %s.\n", n, ipstr);
+	printf("Packet %d received\n", n);
 
 	bool packetGood = false;
 
@@ -104,8 +101,6 @@ void packetReciever::recievePacket() {
 	int idx = n - sequenceNumber;
 	if (idx < 0 && idx + range < windowSize)
 		idx += range;
-
-	printf("idx = %d\n", idx);
 
 	if (idx >= 0 && idx < windowSize) {
 		// decode the buffer
@@ -131,22 +126,19 @@ void packetReciever::recievePacket() {
 			di++;
 		}
 
-		printf("checksum: %d\n", cksum((uint16_t*) buffer, packetSize / 2));
+		//printf("checksum: %d\n", cksum((uint16_t*) buffer, packetSize / 2));
 		packetGood = (sum == cksum((uint16_t*) buffer, packetSize / 2));
 
 		if (packetGood) {
+			printf("Checksum OK\n");
 			data[idx] = decoded;
 			recieved[idx] = true;
-			printf("idx %d marked true\n", idx);
+
 			sendAck(n);
+
 			if (n == sequenceNumber) {
 				int adv = 0;
 				while (adv < windowSize && recieved[adv]) {
-					printf("adv = %d, recieved = %d\n", adv, recieved[adv]);
-
-					if (data[adv] == NULL)
-						printf("???\n");
-					
 					fwrite(data[adv], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
 					free(data[adv]);
 					data[adv] = NULL;
@@ -157,29 +149,18 @@ void packetReciever::recievePacket() {
 				}
 
 				// shift data over
-				printf("SHIFT!!!\n");
-				for (int j = 0; j < windowSize; j++) {
-					printf("recieved[%d] = %d\n", j, recieved[j]);
-				}
 				for (int j = adv; j < windowSize; j++) {
 					data[j - adv] = data[j];
 					data[j] = NULL;
 					recieved[j - adv] = recieved[j];
 					recieved[j] = false;
 				}
-				for (int j = 0; j < windowSize; j++) {
-					printf("recieved[%d] = %d\n", j, recieved[j]);
-				}
-			}
-
-			for (int j = 0; j < windowSize; j++) {
-				printf("recieved[%d] = %d\n", j, recieved[j]);
 			}
 		} else {
+			printf("Checksum failed\n");
 			eof = false;	// if we recieved a bad packet with a zero, reset eof flag
 		}
 	} else if (idx < 0 && idx >= -windowSize) {
-		printf("OLD!!!\n");
 		sendAck(n);
 	}
 
@@ -189,10 +170,15 @@ void packetReciever::recievePacket() {
 
 void packetReciever::sendAck(int n) {
 	net_write(&n, sizeof(int), sockfd);
-	printf("Ack %d sent.\n", n);
+	printf("Ack %d sent\n", n);
 }
 
 void packetReciever::printEndStats(double totalTime) {
+	/* 
+		TODO: last sequence number
+		total original packets
+		total retransmitted packets
+	*/
 	printf("Packet size received: %d bytes\n", packetSize);
 	printf("Packets received: %d\n", packetsReceived);
 	printf("Total elapsed time %fms\n", totalTime);
