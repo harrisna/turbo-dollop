@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <cstring>
+#include <vector>
 
 #include "timer.h"
 
@@ -26,6 +27,7 @@ private:
 	uint8_t **data;
 	timer *rtTimer;
 	bool *recieved;
+	std::vector<int> errors;
 
 	bool hasOverrun;
 	uint8_t overrun;
@@ -40,8 +42,11 @@ private:
 	void printEndStats(double totalTime);
 
 public:
-	packetSender(int sockfd, int packetSize, int range, int windowSize, bool recieverWindow, double timeout, char* filename, long damPercent, int* errorBuffer, int
-	errorChoice);
+	packetSender(int sockfd, int packetSize, int range, 
+		int windowSize, bool recieverWindow, 
+		double timeout, char* filename, 
+		long damPercent, std::vector<int> errors, int errorChoice);
+	
 	void encodePacket(int n, int windowOffset);
 	void sendPacket(int n, int windowOffset);
 	int recieveAck(double timeout);
