@@ -21,6 +21,7 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	this->errors = errors;
 
 	this->packetsSent = 0;
+	this->packetsResent = 0;
 	sequenceNumber = 0;
 	this->eof = false;
 	this->hasOverrun = false;
@@ -89,6 +90,7 @@ void packetSender::sendFile() {
 				encodePacket((sequenceNumber + i) % range, i);
 				sendPacket((sequenceNumber + i) % range, i);
 				printf("Packet %d sent\n", (sequenceNumber + i) % range);
+				packetsSent++;
 			}
 
 			adv = 0;	// now that we've advanced the window, reset adv
@@ -100,7 +102,7 @@ void packetSender::sendFile() {
 				printf("Packet %d *****Timed Out *****\n", (sequenceNumber + i) % range);
 				sendPacket((sequenceNumber + i) % range, i);
 				printf("Packet %d Re-transmitted.\n", (sequenceNumber + i) % range);
-				//numRetransmit++;
+				packetsResent++;
 			}
 		}
 
@@ -242,7 +244,7 @@ void packetSender::sendPacket(int n, int windowOffset) {
 	net_addrstr(dst, ipstr, IPSTRLEN);
 
 	//printf("Packet %d sent to %s.\n", n, ipstr);
-	packetsSent++;
+	//packetsSent++;
 }
 
 int packetSender::recieveAck(double timeout) {
@@ -268,16 +270,12 @@ int packetSender::recieveAck(double timeout) {
 	return -1;
 }
 void packetSender::printEndStats(double totalTime) {
-	/* 
-		TODO: change number of packets to number of original packets
-		add number of re-transmitted packets
-		change throughput to total throughput
-		add effective throughput
-	*/ 
-	printf("Packet size: %d bytes\n", packetSize);
-	printf("Number of packets sent: %d\n", packetsSent);
-	printf("Total Time: %fms\n", totalTime);
-	printf("Throughput: %f (Mbps)\n",((packetSize*packetsSent)*8)/totalTime);
+	//printf("Packet size: %d bytes\n", packetSize);
+	printf("Number of original packets sent: %d\n", packetsSent);
+	printf("Number of retransmitted packets: %d\n", packetsResent);
+	printf("Total elapsed time: %fms\n", totalTime);
+	printf("Total throughput (Mbps): %f\n",((packetSize*(packetsSent+packetsResent))*8)/totalTime);
+	printf("Effective throughput: %f\n",((packetSize*packetsSent)*8)/totalTime);
 	char *md5sum = (char *)malloc((strlen(filename) + 7) * sizeof(char));
 	sprintf(md5sum, "md5sum %s", filename);
 	system(md5sum);

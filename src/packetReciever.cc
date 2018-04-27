@@ -6,10 +6,13 @@
 packetReciever::packetReciever(int sockfd, char* filename) {
 	this->sockfd = sockfd;
 	this->eof = false;
-	this->packetsReceived = 0;
 	this->filename = filename;
 
 	this->overrun = false;
+
+	this->lastPacket = 0;
+	this->packetsReceived = 0;
+	this->retransmitsReceived = 0;
 
 	file = fopen(filename, "wb");
 
@@ -98,6 +101,10 @@ void packetReciever::recievePacket() {
 	uint8_t *decoded = (uint8_t *) calloc(packetSize, sizeof(uint8_t));	
 	int di = 0;
 
+	// increment retransmitted packets (we cheat here, if we find that the packet was successfully sent, we increment original packets and decrement this)
+	retransmitsReceived++;
+	lastPacket = n;
+
 	int idx = n - sequenceNumber;
 	if (idx < 0 && idx + range < windowSize)
 		idx += range;
@@ -146,6 +153,9 @@ void packetReciever::recievePacket() {
 
 					adv++;
 					incrementSequenceNumber();
+
+					packetsReceived++;
+					retransmitsReceived--;
 				}
 
 				// shift data over
@@ -174,14 +184,10 @@ void packetReciever::sendAck(int n) {
 }
 
 void packetReciever::printEndStats(double totalTime) {
-	/* 
-		TODO: last sequence number
-		total original packets
-		total retransmitted packets
-	*/
-	printf("Packet size received: %d bytes\n", packetSize);
-	printf("Packets received: %d\n", packetsReceived);
-	printf("Total elapsed time %fms\n", totalTime);
+	printf("Last packet seq# received: %d\n", lastPacket);
+	printf("Number of original packets received: %d\n", packetsReceived);
+	printf("Number of retransmitted packets received: %d\n", retransmitsReceived);
+	//printf("Total elapsed time %fms\n", totalTime);
 	char *md5sum = (char *)malloc((strlen(filename) + 7) * sizeof(char));
 	sprintf(md5sum, "md5sum %s", filename);
 	system(md5sum);

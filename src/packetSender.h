@@ -37,6 +37,7 @@ private:
 	bool hasOverrun;
 	uint8_t overrun;
 	int packetsSent;
+	int packetsResent;
 	int sequenceNumber;
 	bool eof;
 
