@@ -9,7 +9,7 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 	this->packetsReceived = 0;
 	this->filename = filename;
 
-	this->windowSize = 1;
+	//this->windowSize = 1;
 
 	data = (uint8_t **) malloc(sizeof(uint8_t *) * windowSize);
 	recieved = (bool *) malloc(sizeof(bool *) * windowSize);
@@ -21,6 +21,12 @@ packetReciever::packetReciever(int sockfd, char* filename) {
 
 	net_read(&packetSize, sizeof(int), sockfd);
 	net_read(&range, sizeof(int), sockfd);
+	net_read(&windowSize, sizeof(int), sockfd);
+
+	for (int i = 0; i < 10; i++) {
+		uint8_t png;
+		net_read(&png, sizeof(uint8_t), sockfd);
+	}
 
 	sequenceNumber = 0;
 }

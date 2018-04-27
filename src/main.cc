@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
 		packetReciever r = packetReciever(startClient(argv[2]), argv[1]);
 		r.recieveFile();
 	} else {
-		int range, pktsz, option;
+		int range, pktsz, protocol, option;
 		char dam;
 		long damPercent;
 		int errorChoice = 0;
@@ -20,7 +20,24 @@ int main(int argc, char **argv) {
 		scanf("%d", &range);
 		printf("\nEnter packet size (in bytes):\n");
 		scanf("%d", &pktsz);
-		//printf("\nSelect protocol:\n
+
+		printf("\nSelect protocol:\n1. Stop and Wait\n2. Go Back N\n3. Selective Repeat\n");
+		scanf("%d", &protocol);
+
+		int windowSize = 1;
+		bool recieverWindow = false;
+		switch(protocol) {
+			case 3:
+				recieverWindow = true;
+			case 2:
+				printf("\nEnter window size\n");
+				scanf("%d", &windowSize);
+		}
+
+		int timeout;
+		printf("\nEnter timeout in milliseconds (<= 0 for dynamic):\n");
+		scanf("%d", &timeout);
+
 		printf("Would you like to damage packets? (y/n)");
 		scanf(" %c", &dam);
 		if(dam == 'y'){
@@ -48,7 +65,7 @@ int main(int argc, char **argv) {
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
-		packetSender s = packetSender(clifd, pktsz, range, 1, argv[1], damPercent, buffer, errorChoice);
+		packetSender s = packetSender(clifd, pktsz, range, windowSize, recieverWindow, timeout, argv[1], damPercent, buffer, errorChoice);
 		s.sendFile();
 	}
 }

@@ -5,14 +5,13 @@
 #include "packetSender.h"
 #include "rand.h"
 
-packetSender::packetSender(int sockfd, int packetSize, int range, int windowSize, char* filename, long damPercent, int* errorBuffer, int
-errorChoice) {
+packetSender::packetSender(int sockfd, int packetSize, int range, int windowSize, bool recieverWindow, double timeout, char* filename, long damPercent, int* errorBuffer, int errorChoice) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
 	this->windowSize = windowSize;
 	this->windowOffset = 0;
-	this->timeout = 1000.0;
+	this->timeout = timeout;
 	this->hasOverrun = false;
 	this->eof = false;
 	this->filename = filename;
@@ -39,6 +38,24 @@ errorChoice) {
 
 	net_write(&packetSize, sizeof(int), sockfd);
 	net_write(&range, sizeof(int), sockfd);
+	if (recieverWindow) {
+		net_write(&windowSize, sizeof(int), sockfd);
+	} else {
+		int tmp = 1;
+		net_write(&tmp, sizeof(int), sockfd);
+	}
+
+	// now ping to generate a dynamic timeout value:
+	timer pingTimer;
+	pingTimer.start();
+
+	for (int i = 0; i < 10; i++) {
+		uint8_t png = 0xff;
+		net_write(&png, sizeof(uint8_t), sockfd);
+	}
+
+	if (this->timeout <= 0.0)
+		this->timeout = (pingTimer.end() / 10.0) * 2.0;	// double avg for safety
 }
 
 // TODO: pass/open file here
@@ -94,12 +111,20 @@ void packetSender::sendFile() {
 			for (int i = 0; i < windowSize; i++)
 				printf("buffer[%d]: %s\n", i, data[i]);
 		} else {
-			for (int i = 0; i < windowSize; i++) {
+			/*for (int i = 0; i < windowSize; i++) {
 				// if a packet hasn't been recieved and is past its timeout, resend it
 				if (rtTimer[i].peek() > timeout && !recieved[i]) {
 					printf("RESENT buffer[%d]: %s\n", i, data[i]);
 					sendPacket((sequenceNumber + i) % range, i);
 				}
+			}*/
+		}
+
+		for (int i = 0; i < windowSize; i++) {
+			// if a packet hasn't been recieved and is past its timeout, resend it
+			if (rtTimer[i].peek() > timeout && !recieved[i]) {
+				printf("RESENT buffer[%d]: %s\n", i, data[i]);
+				sendPacket((sequenceNumber + i) % range, i);
 			}
 		}
 
