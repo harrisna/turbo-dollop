@@ -60,6 +60,7 @@ void packetReciever::recieveFile() {
 				break;
 			}
 		}
+		//printf("eof = %d, flushed = %d\n", eof, flushed);
 		
 		//printf("\n");
 	}
@@ -104,6 +105,8 @@ void packetReciever::recievePacket() {
 		idx += range;
 
 	if (idx >= 0 && idx < windowSize) {
+		bool isEOF = false;
+
 		// decode the buffer
 		int i = 0;
 		if (overrun) {
@@ -115,7 +118,7 @@ void packetReciever::recievePacket() {
 
 		for (; i < packetSize; i++) {
 			if (buffer[i] == 0x00) {
-				eof = true;
+				isEOF = true;
 				break;
 			} else if (buffer[i] == 0x01) {
 				if (i == packetSize - 1)
@@ -136,6 +139,9 @@ void packetReciever::recievePacket() {
 			recieved[idx] = true;
 
 			sendAck(n);
+
+			if (isEOF)
+				eof = true;
 
 			if (n == sequenceNumber) {
 				int adv = 0;
@@ -163,7 +169,6 @@ void packetReciever::recievePacket() {
 			}
 		} else {
 			printf("Checksum failed\n");
-			eof = false;	// if we recieved a bad packet with a zero, reset eof flag
 		}
 	} else if (idx < 0 && idx >= -windowSize) {
 		sendAck(n);
