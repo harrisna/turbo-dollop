@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
 			case 3:
 				recieverWindow = true;
 			case 2:
+				// TODO: invalidate input
 				printf("\nEnter window size\n");
 				scanf("%d", &windowSize);
 		}
