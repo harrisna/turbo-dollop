@@ -32,6 +32,8 @@ private:
 	timer *rtTimer;
 	bool *recieved;
 	std::vector<int> errors;
+	std::vector<int> packetDrops;
+	std::vector<int> ackDrops;
 
 	// state
 	bool hasOverrun;
@@ -54,7 +56,8 @@ public:
 	packetSender(int sockfd, int packetSize, int range, 
 		int windowSize, bool recieverWindow, 
 		double timeout, char* filename, 
-		long damPercent, std::vector<int> errors, int errorChoice);
+		long damPercent, std::vector<int> errors, int errorChoice,
+		std::vector<int> packetDrops, std::vector<int> ackDrops);
 
 	void sendFile();
 };

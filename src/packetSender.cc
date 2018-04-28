@@ -8,7 +8,8 @@
 packetSender::packetSender(int sockfd, int packetSize, int range, 
 		int windowSize, bool recieverWindow, 
 		double timeout, char* filename, 
-		long damPercent, std::vector<int> errors, int errorChoice) {
+		long damPercent, std::vector<int> errors, int errorChoice,
+		std::vector<int> packetDrops, std::vector<int> ackDrops) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
@@ -19,6 +20,8 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	this->damPercent = damPercent;
 	this->errorChoice = errorChoice;
 	this->errors = errors;
+	this->packetDrops = packetDrops;
+	this->ackDrops = ackDrops;
 
 	this->packetsSent = 0;
 	this->packetsResent = 0;
@@ -190,9 +193,22 @@ void packetSender::encodePacket(int n, int windowOffset) {
 void packetSender::sendPacket(int n, int windowOffset) {
 	rtTimer[windowOffset].start();
 
+	if(packetDrops.size() != 0 && packetDrops.size() != 1) {
+		std::vector <int> :: iterator i;
+		int count = 1;
+		for(i = packetDrops.begin(); i != packetDrops.end(); ++i) {
+			if(*i == n) {
+				packetDrops.erase(packetDrops.begin() + count - 1);
+				return;
+			}
+			count++;
+		}
+	}
+
 	net_write(&n, sizeof(int), sockfd);
 	net_write(&src, sizeof(uint32_t), sockfd);
 	net_write(&dst, sizeof(uint32_t), sockfd);
+
 	if(errorChoice == 0) {
 		net_write(data[windowOffset], sizeof(uint8_t) * packetSize, sockfd);
 	}

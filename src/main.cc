@@ -11,10 +11,12 @@ int main(int argc, char **argv) {
 		r.recieveFile();
 	} else {
 		int range, pktsz, protocol, option;
-		char dam;
+		char dam, packDrop, ackDrop;
 		long damPercent = 0;
 		int errorChoice = 0;
 		std::vector<int> errors;
+		std::vector<int> packetDrops;
+		std::vector<int> ackDrops;
 
 		printf("Enter a sequence number range:\n");
 		scanf("%d", &range);
@@ -52,8 +54,10 @@ int main(int argc, char **argv) {
 			else {
 				printf("Enter the packet numbers you'd like damaged. Enter -1 to finish\n");
 				int specificDamage;
-				//int i = 0;
 				scanf("%d", &specificDamage);
+				if(specificDamage != -1) {
+					errors.push_back(specificDamage);
+				}
 				while(specificDamage != -1) {
 					errors.push_back(scanf("%d", &specificDamage));
 				}
@@ -62,13 +66,42 @@ int main(int argc, char **argv) {
 		} else {
 			errorChoice = 0;
 		}
+		printf("Would you like to drop packets? (y/n)\n");
+		scanf(" %c", &packDrop);
+		if(packDrop == 'y') {
+			printf("Enter the packet numbers you'd like to drop. Enter -1 to finish.\n");
+			int packetToDrop;
+			scanf("%d", &packetToDrop);
+			if(packetToDrop != -1) {
+				packetDrops.push_back(packetToDrop);
+			}
+			while(packetToDrop != -1) {
+				packetDrops.push_back(scanf("%d", &packetToDrop));
+			}
+		}
+		printf("Would you like to drop acks? (y/n)\n");
+		scanf(" %c", &ackDrop);
+		if(ackDrop == 'y') {
+			printf("Enter the ack numbers you'd like to drop. Enter -1 to finish.\n");
+			int ackToDrop;
+			scanf("%d", &ackToDrop);
+			if(ackToDrop != -1) {
+				ackDrops.push_back(ackToDrop);
+			}
+			while(ackToDrop != -1) {
+				ackDrops.push_back(scanf("%d", &ackToDrop));
+			}
+		}
+
 		int servfd = startServer();
 		int clifd = acceptClient(servfd);
 
 		packetSender s = packetSender(clifd, pktsz, range, 
 			windowSize, recieverWindow, 
 			timeout, argv[1], 
-			damPercent, errors, errorChoice);
+			damPercent, errors, errorChoice,
+			packetDrops, ackDrops);
+			
 		s.sendFile();
 	}
 }
