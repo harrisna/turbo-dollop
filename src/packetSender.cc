@@ -118,7 +118,7 @@ void packetSender::sendFile() {
 					oldest = std::max(telapsed, oldest);
 			}
 		}
-
+		
 		// if we received a valid ack, check if we can advance the window
 		if (recieveAck(timeout - oldest) != -1) {
 			adv = 0;
@@ -267,6 +267,20 @@ int packetSender::recieveAck(double timeout) {
 	if (net_wait(timeout, sockfd)) {
 		int n;
 		net_read(&n, sizeof(int), sockfd);
+
+		//Ack drop functionality
+		if(ackDrops.size() != 0 && ackDrops.size() != 1) {
+			std::vector <int> :: iterator i;
+			int count = 1;
+			for(i = ackDrops.begin(); i != ackDrops.end(); ++i) {
+				if(*i == n) {
+					printf("Dropping packet %d\n", n);
+					ackDrops.erase(ackDrops.begin() + count - 1);
+					return -1;
+				}
+				count++;
+			}
+		}
 
 		printf("Ack %d received ", n);
 
