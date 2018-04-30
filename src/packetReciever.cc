@@ -132,13 +132,14 @@ void packetReciever::recievePacket() {
 							eof = true;
 							break;
 						} else if (data[adv][i] == 0x01) {
-							if (i == packetSize - 1)
-								overrun = true; // FIXME: this doesn't work out of order!!
-							else
+							if (i == packetSize - 1) {
+								overrun = true;
+								break;
+							} else
 								i++;	// skip escape character
 						}
 						decoded[di] = data[adv][i];
-						di++;
+						di++;	// are we adding one too many?
 					}
 
 					fwrite(decoded, sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
@@ -180,8 +181,8 @@ void packetReciever::sendAck(int n) {
 
 void packetReciever::printEndStats(double totalTime) {
 	printf("Last packet seq# received: %d\n", lastPacket);
-	printf("Number of original packets received: %d\n", packetsReceived);
-	printf("Number of retransmitted packets received: %d\n", retransmitsReceived);
+	printf("Number of original packets received: %llu\n", packetsReceived);
+	printf("Number of retransmitted packets received: %llu\n", retransmitsReceived);
 	//printf("Total elapsed time %fms\n", totalTime);
 	char *md5sum = (char *)malloc((strlen(filename) + 7) * sizeof(char));
 	sprintf(md5sum, "md5sum %s", filename);

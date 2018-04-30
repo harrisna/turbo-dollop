@@ -16,8 +16,8 @@ private:
 	bool *recieved;
 
 	int sequenceNumber;
-	int packetsReceived;
-	int retransmitsReceived;
+	uint64_t packetsReceived;
+	uint64_t retransmitsReceived;
 	int lastPacket;
 
 	bool overrun;

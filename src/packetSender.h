@@ -38,8 +38,8 @@ private:
 	// state
 	bool hasOverrun;
 	uint8_t overrun;
-	int packetsSent;
-	int packetsResent;
+	uint64_t packetsSent;
+	uint64_t packetsResent;
 	int sequenceNumber;
 	bool eof;
 

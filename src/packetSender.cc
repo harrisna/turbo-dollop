@@ -301,8 +301,8 @@ int packetSender::recieveAck(double timeout) {
 }
 void packetSender::printEndStats(double totalTime) {
 	//printf("Packet size: %d bytes\n", packetSize);
-	printf("Number of original packets sent: %d\n", packetsSent);
-	printf("Number of retransmitted packets: %d\n", packetsResent);
+	printf("Number of original packets sent: %llu\n", packetsSent);
+	printf("Number of retransmitted packets: %llu\n", packetsResent);
 	printf("Total elapsed time: %fms\n", totalTime);
 	printf("Total throughput (Mbps): %f\n",((packetSize*(packetsSent+packetsResent))*8)/totalTime);
 	printf("Effective throughput: %f\n",((packetSize*packetsSent)*8)/totalTime);
