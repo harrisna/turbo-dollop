@@ -135,13 +135,14 @@ void packetReciever::recievePacket() {
 							if (i == packetSize - 1)
 								overrun = true; // FIXME: this doesn't work out of order!!
 							else
-								i++;
+								i++;	// skip escape character
 						}
 						decoded[di] = data[adv][i];
 						di++;
 					}
 
 					fwrite(decoded, sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
+
 					free(decoded);
 					data[adv] = NULL;
 					recieved[adv] = false;
@@ -161,6 +162,8 @@ void packetReciever::recievePacket() {
 					recieved[j - adv] = recieved[j];
 					recieved[j] = false;
 				}
+
+				fflush(file);
 			}
 		} else {
 			printf("Checksum failed\n");
