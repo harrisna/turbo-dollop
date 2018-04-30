@@ -9,7 +9,9 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 		int windowSize, bool recieverWindow, 
 		double timeout, char* filename, 
 		long damPercent, std::vector<int> errors, int errorChoice,
-		std::vector<int> packetDrops, std::vector<int> ackDrops) {
+		std::vector<int> packetDrops, std::vector<int> ackDrops,
+		long packDropPercent, int packDropErrorChoice,
+		long ackDropPercent, int ackDropErrorChoice) {
 	this->sockfd = sockfd;
 	this->packetSize = packetSize;
 	this->range = range;
@@ -22,6 +24,10 @@ packetSender::packetSender(int sockfd, int packetSize, int range,
 	this->errors = errors;
 	this->packetDrops = packetDrops;
 	this->ackDrops = ackDrops;
+	this->packDropPercent = packDropPercent;
+	this->packDropErrorChoice = packDropErrorChoice;
+	this->ackDropPercent = ackDropPercent;
+	this->ackDropErrorChoice = ackDropErrorChoice;
 
 	this->packetsSent = 0;
 	this->packetsResent = 0;
@@ -193,15 +199,23 @@ void packetSender::encodePacket(int n, int windowOffset) {
 void packetSender::sendPacket(int n, int windowOffset) {
 	rtTimer[windowOffset].start();
 
-	if(packetDrops.size() != 0 && packetDrops.size() != 1) {
-		std::vector <int> :: iterator i;
-		int count = 1;
-		for(i = packetDrops.begin(); i != packetDrops.end(); ++i) {
-			if(*i == n) {
-				packetDrops.erase(packetDrops.begin() + count - 1);
-				return;
+	if(packDropErrorChoice == 1){
+		long packDropRand = randL(100);
+		if(packDropRand < packDropPercent) {
+			return;
+		}
+	}
+	else if(packDropErrorChoice == 2){
+		if(packetDrops.size() != 0) {
+			std::vector <int> :: iterator i;
+			int count = 1;
+			for(i = packetDrops.begin(); i != packetDrops.end(); ++i) {
+				if(*i == n) {
+					packetDrops.erase(packetDrops.begin() + count - 1);
+					return;
+				}
+				count++;
 			}
-			count++;
 		}
 	}
 
@@ -226,19 +240,20 @@ void packetSender::sendPacket(int n, int windowOffset) {
 		}
 	}
 	else {
-		std::vector <int> :: iterator j;
-		int count = 1;
 		bool damaged = false;
-		for(j = errors.begin(); j != errors.end(); ++j) {
-			if(*j == n) {
-				damaged = true;
-				errors.erase(errors.begin() + count-1);
-				goto out;
+		if(errors.size() != 0){
+			std::vector <int> :: iterator j;
+			int count = 1;
+			for(j = errors.begin(); j != errors.end(); ++j) {
+				if(*j == n) {
+					damaged = true;
+					errors.erase(errors.begin() + count-1);
+					goto out;
+				}
+				count++;
 			}
-			count++;
 		}
 		out:
-
 		if(damaged) {
 			// toggle first byte lsb
 			data[windowOffset][0] ^= 0x01;
@@ -269,19 +284,26 @@ int packetSender::recieveAck(double timeout) {
 		net_read(&n, sizeof(int), sockfd);
 
 		//Ack drop functionality
-		if(ackDrops.size() != 0 && ackDrops.size() != 1) {
-			std::vector <int> :: iterator i;
-			int count = 1;
-			for(i = ackDrops.begin(); i != ackDrops.end(); ++i) {
-				if(*i == n) {
-					printf("Dropping packet %d\n", n);
-					ackDrops.erase(ackDrops.begin() + count - 1);
-					return -1;
-				}
-				count++;
+		if(ackDropErrorChoice == 1){
+			long ackDropRand = randL(100);
+			if(ackDropRand < ackDropPercent){
+				return -1;	
 			}
 		}
-
+		else if (ackDropErrorChoice == 2){
+			if(ackDrops.size() != 0) {
+				std::vector <int> :: iterator i;
+				int count = 1;
+				for(i = ackDrops.begin(); i != ackDrops.end(); ++i) {
+					if(*i == n) {
+						printf("Dropping packet %d\n", n);
+						ackDrops.erase(ackDrops.begin() + count - 1);
+						return -1;
+					}
+					count++;
+				}
+			}
+		}
 		printf("Ack %d received ", n);
 
 		if (n < sequenceNumber)

@@ -13,7 +13,11 @@ int main(int argc, char **argv) {
 		int range, pktsz, protocol, option;
 		char dam, packDrop, ackDrop;
 		long damPercent = 0;
+		long packDropPercent = 0;
+		long ackDropPercent = 0;
 		int errorChoice = 0;
+		int packDropErrorChoice = 0;
+		int ackDropErrorChoice = 0;
 		std::vector<int> errors;
 		std::vector<int> packetDrops;
 		std::vector<int> ackDrops;
@@ -59,37 +63,67 @@ int main(int argc, char **argv) {
 					errors.push_back(specificDamage);
 				}
 				while(specificDamage != -1) {
-					errors.push_back(scanf("%d", &specificDamage));
+					scanf("%d", &specificDamage);
+					if(specificDamage != -1) {
+						errors.push_back(specificDamage);
+					}
 				}
 				errorChoice = 2;
 			}
-		} else {
-			errorChoice = 0;
-		}
+		} 
+
 		printf("Would you like to drop packets? (y/n)\n");
 		scanf(" %c", &packDrop);
 		if(packDrop == 'y') {
-			printf("Enter the packet numbers you'd like to drop. Enter -1 to finish.\n");
-			int packetToDrop;
-			scanf("%d", &packetToDrop);
-			if(packetToDrop != -1) {
-				packetDrops.push_back(packetToDrop);
+			printf("Would you like to drop a percent of packets (1) or specific packet numbers(2)?\n");
+			int packDropChoice;
+			scanf("%d", &packDropChoice); 
+			if(packDropChoice == 1) {
+				printf("Enter percent of packets you would like dropped:\n");
+				scanf("%ld", &packDropPercent);
+				packDropErrorChoice = 1;
 			}
-			while(packetToDrop != -1) {
-				packetDrops.push_back(scanf("%d", &packetToDrop));
+			else{
+				printf("Enter the packet numbers you'd like to drop. Enter -1 to finish.\n");
+				int packetToDrop;
+				scanf("%d", &packetToDrop);
+				if(packetToDrop != -1) {
+					packetDrops.push_back(packetToDrop);
+				}
+				while(packetToDrop != -1) {
+					scanf("%d", &packetToDrop);
+					if(packetToDrop != -1){
+						packetDrops.push_back(packetToDrop);
+					}
+				}
+				packDropErrorChoice = 2;
 			}
 		}
 		printf("Would you like to drop acks? (y/n)\n");
 		scanf(" %c", &ackDrop);
 		if(ackDrop == 'y') {
-			printf("Enter the ack numbers you'd like to drop. Enter -1 to finish.\n");
-			int ackToDrop;
-			scanf("%d", &ackToDrop);
-			if(ackToDrop != -1) {
-				ackDrops.push_back(ackToDrop);
+			printf("Would you like to drop a percent of acks (1) or specific ack numbers(2)?\n");
+			int ackDropChoice;
+			scanf("%d", &ackDropChoice);
+			if(ackDropChoice == 1) {
+				printf("Enter percent of acks you would like to drop:\n");	
+				scanf("%ld", &ackDropPercent);
+				ackDropErrorChoice = 1;
 			}
-			while(ackToDrop != -1) {
-				ackDrops.push_back(scanf("%d", &ackToDrop));
+			else{
+				printf("Enter the ack numbers you'd like to drop. Enter -1 to finish.\n");
+				int ackToDrop;
+				scanf("%d", &ackToDrop);
+				if(ackToDrop != -1) {
+					ackDrops.push_back(ackToDrop);
+				}
+				while(ackToDrop != -1) {
+					scanf("%d", &ackToDrop);
+					if(ackToDrop != -1) {
+						ackDrops.push_back(ackToDrop);
+					}
+				}
+				ackDropErrorChoice = 2;
 			}
 		}
 
@@ -100,7 +134,9 @@ int main(int argc, char **argv) {
 			windowSize, recieverWindow, 
 			timeout, argv[1], 
 			damPercent, errors, errorChoice,
-			packetDrops, ackDrops);
+			packetDrops, ackDrops,
+			packDropPercent, packDropErrorChoice,
+			ackDropPercent, ackDropErrorChoice);
 			
 		s.sendFile();
 	}

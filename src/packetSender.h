@@ -27,6 +27,12 @@ private:
 	int errorChoice;
 	int* errorBuffer;
 
+	long packDropPercent;
+	int packDropErrorChoice;
+
+	long ackDropPercent;
+	int ackDropErrorChoice;
+
 	// arrays
 	uint8_t **data;
 	timer *rtTimer;
@@ -57,7 +63,9 @@ public:
 		int windowSize, bool recieverWindow, 
 		double timeout, char* filename, 
 		long damPercent, std::vector<int> errors, int errorChoice,
-		std::vector<int> packetDrops, std::vector<int> ackDrops);
+		std::vector<int> packetDrops, std::vector<int> ackDrops,
+		long packDropPercent, int packDropErrorChoice,
+		long ackDropPercent, int ackDropErrorChoice);
 
 	void sendFile();
 };
