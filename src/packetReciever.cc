@@ -92,9 +92,6 @@ void packetReciever::recievePacket() {
 
 	bool packetGood = false;
 
-	// allocate decoded buffer
-	uint8_t *decoded = (uint8_t *) calloc(packetSize, sizeof(uint8_t));	
-	int di = 0;
 
 	// increment retransmitted packets (we cheat here, if we find that the packet was successfully sent, we increment original packets and decrement this)
 	retransmitsReceived++;
@@ -105,49 +102,47 @@ void packetReciever::recievePacket() {
 		idx += range;
 
 	if (idx >= 0 && idx < windowSize) {
-		bool isEOF = false;
-
-		// decode the buffer
-		int i = 0;
-		if (overrun) {
-			decoded[di] = buffer[i];
-			overrun = false;
-			i++;
-			di++;
-		}
-
-		for (; i < packetSize; i++) {
-			if (buffer[i] == 0x00) {
-				isEOF = true;
-				break;
-			} else if (buffer[i] == 0x01) {
-				if (i == packetSize - 1)
-					overrun = true;
-				else
-					i++;
-			}
-			decoded[di] = buffer[i];
-			di++;
-		}
-
-		//printf("checksum: %d\n", cksum((uint16_t*) buffer, packetSize / 2));
 		packetGood = (sum == cksum((uint16_t*) buffer, packetSize / 2));
 
 		if (packetGood) {
 			printf("Checksum OK\n");
-			data[idx] = decoded;
+			data[idx] = buffer;
 			recieved[idx] = true;
 
 			sendAck(n);
 
-			if (isEOF)
-				eof = true;
-
 			if (n == sequenceNumber) {
 				int adv = 0;
 				while (adv < windowSize && recieved[adv]) {
-					fwrite(data[adv], sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
-					free(data[adv]);
+					// allocate decoded buffer
+					uint8_t *decoded = (uint8_t *) calloc(packetSize, sizeof(uint8_t));	
+					int di = 0;
+
+					// decode the buffer
+					int i = 0;
+					if (overrun) {
+						decoded[di] = data[adv][0];
+						overrun = false;
+						i++;
+						di++;
+					}
+
+					for (; i < packetSize; i++) {
+						if (data[adv][i] == 0x00) {
+							eof = true;
+							break;
+						} else if (data[adv][i] == 0x01) {
+							if (i == packetSize - 1)
+								overrun = true; // FIXME: this doesn't work out of order!!
+							else
+								i++;
+						}
+						decoded[di] = data[adv][i];
+						di++;
+					}
+
+					fwrite(decoded, sizeof(uint8_t), di, file);	// TODO: test if this works correctly on binaries
+					free(decoded);
 					data[adv] = NULL;
 					recieved[adv] = false;
 
@@ -173,9 +168,6 @@ void packetReciever::recievePacket() {
 	} else if (idx < 0 && idx >= -windowSize) {
 		sendAck(n);
 	}
-
-
-	free(buffer);
 }
 
 void packetReciever::sendAck(int n) {
