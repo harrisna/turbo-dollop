@@ -98,7 +98,7 @@ void net_write(void* x, size_t sz, int sockfd) {
 	}
 }
 
-void net_read(void* x, size_t sz, int sockfd) {
+int net_read(void* x, size_t sz, int sockfd) {
 	ssize_t bytesLeft = sz;
 	while (bytesLeft > 0) {
 		ssize_t num = read(sockfd, (uint8_t *) x + (sz - bytesLeft), bytesLeft);
@@ -106,10 +106,14 @@ void net_read(void* x, size_t sz, int sockfd) {
 		if (num < 0) {
 			perror("Error reading from socket");
 			exit(1);
+		} else if (num == 0 && bytesLeft == sz) {
+			// nothing was there, return -1
+			return -1;
 		}
 		
 		bytesLeft -= num;
 	}
+	return 0;
 }
 
 int net_wait(double timeout, int sockfd) {

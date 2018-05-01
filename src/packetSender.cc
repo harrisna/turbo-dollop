@@ -281,7 +281,13 @@ void packetSender::sendPacket(int n, int windowOffset) {
 int packetSender::recieveAck(double timeout) {
 	if (net_wait(timeout, sockfd)) {
 		int n;
-		net_read(&n, sizeof(int), sockfd);
+
+		// if read cannot find anything and we're at eof, receiver probably closed, so end the session
+		if (net_read(&n, sizeof(int), sockfd) == -1 && eof) {
+			printf("receiver connection closed; assuming last ack dropped\n");
+			recieved[0] = true;
+			return sequenceNumber;
+		}
 
 		//Ack drop functionality
 		if(ackDropErrorChoice == 1){
@@ -323,8 +329,8 @@ int packetSender::recieveAck(double timeout) {
 }
 void packetSender::printEndStats(double totalTime) {
 	//printf("Packet size: %d bytes\n", packetSize);
-	printf("Number of original packets sent: %llu\n", packetsSent);
-	printf("Number of retransmitted packets: %llu\n", packetsResent);
+	printf("Number of original packets sent: %lu\n", packetsSent);
+	printf("Number of retransmitted packets: %lu\n", packetsResent);
 	printf("Total elapsed time: %fms\n", totalTime);
 	printf("Total throughput (Mbps): %f\n",((packetSize*(packetsSent+packetsResent))*8)/totalTime);
 	printf("Effective throughput: %f\n",((packetSize*packetsSent)*8)/totalTime);

@@ -169,7 +169,7 @@ void packetReciever::recievePacket() {
 		} else {
 			printf("Checksum failed\n");
 		}
-	} else if (idx < 0 && idx >= -windowSize) {
+	} else if ((idx < 0 && idx >= -windowSize) || (idx - range < 0 && idx - range >= -windowSize)) {
 		sendAck(n);
 	}
 }
@@ -181,8 +181,8 @@ void packetReciever::sendAck(int n) {
 
 void packetReciever::printEndStats(double totalTime) {
 	printf("Last packet seq# received: %d\n", lastPacket);
-	printf("Number of original packets received: %llu\n", packetsReceived);
-	printf("Number of retransmitted packets received: %llu\n", retransmitsReceived);
+	printf("Number of original packets received: %lu\n", packetsReceived);
+	printf("Number of retransmitted packets received: %lu\n", retransmitsReceived);
 	//printf("Total elapsed time %fms\n", totalTime);
 	char *md5sum = (char *)malloc((strlen(filename) + 7) * sizeof(char));
 	sprintf(md5sum, "md5sum %s", filename);
